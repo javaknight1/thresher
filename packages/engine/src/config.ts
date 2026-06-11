@@ -29,6 +29,8 @@ export interface EngineConfig {
     };
     /** price delta lookback compared against the OBV delta (methodology I.7) */
     priceDeltaBars: number;
+    /** EMA-derived signals need ≥ this × the slow EMA period of history (methodology I.2) */
+    minBarsFactor: number;
   };
   families: {
     trend: { priceVsSma50: number; smaStack: number; smaSlope: number };
@@ -84,6 +86,8 @@ export interface EngineConfig {
     preferredZoneStrength: number;
   };
   gates: { minConfidence: number; minRR: number; evMargin: number };
+  /** families with |score| at or above this are named as story drivers */
+  story: { driverThreshold: number };
   /** trading-day veto windows per timeframe; null = flag only, never veto (design §2.2) */
   earningsVetoTradingDays: Record<Timeframe, number | null>;
   sizing: { riskFraction: number; exampleAccount: number };
@@ -107,6 +111,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
       syntheticAtrMult: 2.5,
     },
     priceDeltaBars: 20,
+    minBarsFactor: 5,
   },
   families: {
     trend: { priceVsSma50: 0.4, smaStack: 0.3, smaSlope: 0.3 },
@@ -163,6 +168,7 @@ export const DEFAULT_CONFIG: EngineConfig = {
     preferredZoneStrength: 2,
   },
   gates: { minConfidence: 35, minRR: 1.2, evMargin: 0.25 },
+  story: { driverThreshold: 0.3 },
   earningsVetoTradingDays: { intraday: 1, swing: 3, position: null },
   sizing: { riskFraction: 0.01, exampleAccount: 25000 },
 };
