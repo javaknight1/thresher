@@ -6,19 +6,19 @@ review after M0 and M1.
 
 ## M0 — Engine package (`packages/engine`) — pure, tested, spec-faithful
 
-- [ ] Monorepo scaffold: pnpm workspaces, TS strict, Vitest, ESLint, `packages/engine` + `apps/web` stubs
-- [ ] `config.ts`: all constants from methodology doc, `ENGINE_VERSION`, `configHash`, per-timeframe weight tables (design doc §4.2)
-- [ ] Types: `Bar`, `AnalysisResult`, `Family`, `Detail` (reason string required at type level), `Plan`, `Refusal`, `GateResult`
-- [ ] Indicators per methodology Part I: sma, ema, macd, rsi (Wilder), atr (Wilder), adx (+DI/−DI), obv delta, relVol, bollinger %B, pivot S/R (fractal w=5, 0.5×ATR zone merge, 0.4% nearest-level buffer, synthetic fallback flag)
-- [ ] Indicator golden tests: cross-validation vs `technicalindicators` + hand-computed micro-fixtures (seeding/smoothing edges)
-- [ ] Signal families per design doc §4.1 (component point tables, ADX multiplier, flags: choppy/rsiHot/rsiCold/thin)
-- [ ] Composite + direction (±0.22), confidence base + itemized penalties (methodology II.4)
-- [ ] Stop logic (II.5: 0.45 buffer, 0.8 floor, 2.2 cap) and target logic (II.6: 1.4 structure check, 2R/2.5×ATR projection, overheadWarning)
-- [ ] Gates G1–G5 (II.7), evaluated in order, first failure named; G5 takes `earningsDate` via context param (provider wires it in M1)
-- [ ] Sizing math (II.8) and story generator (assembles drivers, levels, caveats, penalty reasons)
-- [ ] **Worked-example fixture test**: methodology II.9 numbers reproduced exactly, plus counterfactual refusal at G2
-- [ ] Property tests: no NaN for any valid bar series; long ⇒ stop < entry < target (mirror short); emitted ⇒ all gates pass; refusal ⇒ named gate actually fails
-- [ ] Coverage ≥ 90%; `pnpm typecheck && pnpm lint && pnpm test` green
+- [x] Monorepo scaffold: pnpm workspaces, TS strict, Vitest, ESLint, `packages/engine` + `apps/web` stubs
+- [x] `config.ts`: all constants from methodology doc, `ENGINE_VERSION`, `configHash`, per-timeframe weight tables (design doc §4.2)
+- [x] Types: `Bar`, `AnalysisResult`, `Family`, `Detail` (reason string required at type level), `Plan`, `Refusal`, `GateResult`
+- [x] Indicators per methodology Part I: sma, ema, macd, rsi (Wilder), atr (Wilder), adx (+DI/−DI), obv delta, relVol, bollinger %B, pivot S/R (fractal w=5, 0.5×ATR zone merge, 0.4% nearest-level buffer, synthetic fallback flag)
+- [x] Indicator golden tests: cross-validation vs `technicalindicators` + hand-computed micro-fixtures (seeding/smoothing edges)
+- [x] Signal families per design doc §4.1 (component point tables, ADX multiplier, flags: choppy/rsiHot/rsiCold/thin)
+- [x] Composite + direction (±0.22), confidence base + itemized penalties (methodology II.4)
+- [x] Stop logic (II.5: 0.45 buffer, 0.8 floor, 2.2 cap) and target logic (II.6: 1.4 structure check, 2R/2.5×ATR projection, overheadWarning)
+- [x] Gates G1–G5 (II.7), evaluated in order, first failure named; G5 takes `earningsDate` via context param (provider wires it in M1)
+- [x] Sizing math (II.8) and story generator (assembles drivers, levels, caveats, penalty reasons)
+- [x] **Worked-example fixture test**: methodology II.9 numbers reproduced exactly, plus counterfactual refusal at G2
+- [x] Property tests: no NaN for any valid bar series; long ⇒ stop < entry < target (mirror short); emitted ⇒ all gates pass; refusal ⇒ named gate actually fails
+- [x] Coverage ≥ 90%; `pnpm typecheck && pnpm lint && pnpm test` green
 
 **Acceptance:** all above checked; engine README documents the public API.
 **→ HARD STOP: human review of engine code + test output before M1.**
