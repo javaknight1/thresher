@@ -1,0 +1,9 @@
+{
+  "name": "@thresher/web",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "typecheck": "echo '@thresher/web: stub until M1'",
+    "test": "echo '@thresher/web: stub until M1'"
+  }
+}

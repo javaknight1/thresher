@@ -1,0 +1,17 @@
+{
+  "name": "thresher",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.31.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
