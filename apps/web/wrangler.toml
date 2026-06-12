@@ -1,0 +1,6 @@
+# Cloudflare Pages deploy config (design doc §9).
+# Build: pnpm pages:build (next-on-pages) → deploy: pnpm deploy (wrangler pages deploy).
+name = "thresher"
+pages_build_output_dir = ".vercel/output/static"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
