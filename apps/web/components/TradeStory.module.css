@@ -1,0 +1,18 @@
+.root {
+  padding: 18px 22px;
+  border-left-width: 3px;
+  border-left-style: solid;
+  /* border-left-color set inline from the direction */
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-weight: 400;
+}
+
+.body {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text);
+}

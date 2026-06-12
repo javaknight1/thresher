@@ -1,0 +1,126 @@
+.kicker {
+  margin: 26px 0 10px 2px;
+  font-weight: 400;
+  text-transform: none; /* the score and threshold values stay as emitted */
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.weight {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.word {
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.word[data-lean='bull'] {
+  color: var(--long);
+}
+
+.word[data-lean='bear'] {
+  color: var(--short);
+}
+
+.word[data-lean='flat'] {
+  color: var(--neutral);
+}
+
+/* centered −1…+1 score bar */
+.bar {
+  position: relative;
+  height: 5px;
+  margin: 10px 0 12px;
+  border-radius: 3px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+}
+
+.barCenter {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--border);
+}
+
+.barFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+
+.barFill[data-lean='bull'] {
+  background: var(--long);
+}
+
+.barFill[data-lean='bear'] {
+  background: var(--short);
+}
+
+.barFill[data-lean='flat'] {
+  background: var(--neutral);
+}
+
+.details {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+
+.glyph {
+  flex: none;
+}
+
+.glyph[data-ok='1'] {
+  color: var(--long);
+}
+
+.glyph[data-ok='-1'] {
+  color: var(--short);
+}
+
+.glyph[data-ok='0'] {
+  color: var(--neutral);
+}
+
+.detailText {
+  color: var(--muted);
+  line-height: 1.45;
+}

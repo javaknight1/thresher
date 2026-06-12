@@ -1,0 +1,28 @@
+/* PriceChart — panel wrapper around the Lightweight Charts canvas (design §6.2 item 4).
+   Colors come exclusively from the §6.1 custom properties; the canvas itself
+   resolves the same tokens at runtime in PriceChart.tsx. */
+
+.wrap {
+  padding: 16px 12px 10px;
+}
+
+.label {
+  display: block;
+  margin: 0 0 10px 8px;
+}
+
+.host {
+  position: relative;
+  width: 100%;
+  height: 340px;
+}
+
+@media (max-width: 640px) {
+  .host {
+    height: 260px;
+  }
+
+  .wrap {
+    padding: 12px 8px 8px;
+  }
+}

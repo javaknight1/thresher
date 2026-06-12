@@ -1,0 +1,126 @@
+.root {
+  padding: 20px;
+}
+
+.heading {
+  margin: 0 0 8px;
+  font-weight: 400;
+}
+
+/* ---- proportional gauge ---- */
+
+.ladder {
+  display: flex;
+  gap: 14px;
+  height: 190px;
+  margin-top: 12px;
+}
+
+.gauge {
+  position: relative;
+  width: 26px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.rewardZone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--long) 20%, transparent);
+  border-top: 2px solid var(--long);
+}
+
+.riskZone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--short) 17%, transparent);
+  border-bottom: 2px solid var(--short);
+}
+
+.entryLine {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  height: 2px;
+  background: var(--amber);
+}
+
+.labels {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+}
+
+.rowName {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.nameTarget {
+  color: var(--long);
+}
+
+.nameEntry {
+  color: var(--amber);
+}
+
+.nameStop {
+  color: var(--short);
+}
+
+.rowPrice {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.rowSub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- NO TRADE levels readout ---- */
+
+.noLadder {
+  margin-top: 8px;
+}
+
+.noLadderText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.levels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.resistance {
+  color: var(--short);
+}
+
+.closeLevel {
+  color: var(--text);
+}
+
+.support {
+  color: var(--long);
+}
