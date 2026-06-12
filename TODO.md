@@ -25,17 +25,17 @@ review after M0 and M1.
 
 ## M1 — Analyze page, live data, ship
 
-- [ ] `MarketDataProvider` interface + `YahooProvider` (yahoo-finance2): OHLCV per timeframe profile (design doc §2.2 lookbacks), earnings date via quoteSummary
-- [ ] Upstash cache (`ohlcv:{symbol}:{interval}`, TTLs §2.1), stale-while-revalidate, stale-data warning passthrough
-- [ ] Upstash rate limiting: 20/hr anon, 200/hr authed; 429 with reset time
-- [ ] `GET /api/v1/analyze` matching design doc §8 schema exactly (incl. `engineVersion`, `configHash`, `dataFreshness`, `gates[]`, `refusal`)
-- [ ] Error paths: UNKNOWN_SYMBOL 404, RATE_LIMITED 429, DATA_UNAVAILABLE 503 with stale fallback
-- [ ] Analyze page per design doc §6.2: controls, trade card with stat tiles + basis captions, confidence bar with itemized penalties, trade ladder (signature element), TradingView Lightweight Charts (candles + SMA20/50 + level lines), trade story, signal family grid, disclaimer footer
-- [ ] NO TRADE state as designed (§6.2): failed gate explanation, watched levels, family grid still renders
-- [ ] Visual system tokens (§6.1): palette, Space Grotesk + IBM Plex Mono, responsive to mobile, visible focus states
-- [ ] `/methodology/*` pages rendered from `docs/THRESHER-METHODOLOGY.md` content (route map in design doc §6.5); deep links from product numbers
-- [ ] Sentry + PostHog + BetterStack wiring; Playwright smoke: analyze a liquid symbol, a refusal case, an unknown symbol
-- [ ] Deploy to Cloudflare Pages
+- [x] `MarketDataProvider` interface + `YahooProvider` (yahoo-finance2): OHLCV per timeframe profile (design doc §2.2 lookbacks), earnings date via quoteSummary
+- [x] Upstash cache (`ohlcv:{symbol}:{interval}`, TTLs §2.1), stale-while-revalidate, stale-data warning passthrough
+- [x] Upstash rate limiting: 20/hr anon, 200/hr authed; 429 with reset time
+- [x] `GET /api/v1/analyze` matching design doc §8 schema exactly (incl. `engineVersion`, `configHash`, `dataFreshness`, `gates[]`, `refusal`)
+- [x] Error paths: UNKNOWN_SYMBOL 404, RATE_LIMITED 429, DATA_UNAVAILABLE 503 with stale fallback
+- [x] Analyze page per design doc §6.2: controls, trade card with stat tiles + basis captions, confidence bar with itemized penalties, trade ladder (signature element), TradingView Lightweight Charts (candles + SMA20/50 + level lines), trade story, signal family grid, disclaimer footer
+- [x] NO TRADE state as designed (§6.2): failed gate explanation, watched levels, family grid still renders
+- [x] Visual system tokens (§6.1): palette, Space Grotesk + IBM Plex Mono, responsive to mobile, visible focus states
+- [x] `/methodology/*` pages rendered from `docs/THRESHER-METHODOLOGY.md` content (route map in design doc §6.5); deep links from product numbers
+- [x] ~~Sentry + PostHog + BetterStack wiring~~ (deferred 2026-06-11: personal use, no monitoring); Playwright smoke: analyze a liquid symbol, a refusal case, an unknown symbol — DONE
+- [ ] Deploy to Cloudflare (pending: account setup per MANUAL.md + adapter decision — yahoo-finance2 is not edge-safe, so next-on-pages/Pages is out; OpenNext Workers adapter proposed)
 
 **Acceptance:** real ticker → correct full story in browser; refusal renders properly; methodology deep links work; all checks green.
 **→ HARD STOP: human review + manual QA before M2.**
@@ -59,6 +59,6 @@ review after M0 and M1.
 
 ## Parking lot (design doc §11)
 
-- [ ] Universe guardrails: reject < $2 price or < $1M avg dollar volume — RECOMMENDED, confirm
+- [x] Universe guardrails: CONFIRMED 2026-06-10 — enforced at the API layer as 422 UNTRADEABLE_SYMBOL
 - [ ] Free-tier scan limit (5 symbols?) — decide at M2
-- [ ] Intraday data quality: ship swing/position first, gate intraday behind a data-quality check or Polygon — decide at M1
+- [x] Intraday data quality: DECIDED 2026-06-10 — ship intraday in v1 with the visible data-freshness stamp; revisit with Polygon in v2
