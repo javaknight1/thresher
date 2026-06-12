@@ -1,0 +1,242 @@
+/* Trade card + stat tiles + signal-agreement bar + NO TRADE state.
+   Shared by TradeCard, StatTile, ConfidenceBar, NoTrade (design §6.1–§6.2). */
+
+.card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ---- header ---- */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ticker {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+}
+
+.price {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.badge {
+  font-size: 13px;
+  letter-spacing: 2px;
+  border: 1.5px solid var(--neutral);
+  border-radius: 6px;
+  padding: 4px 14px;
+  color: var(--neutral);
+  background: color-mix(in srgb, var(--neutral) 8%, transparent);
+}
+
+.badge[data-direction='long'] {
+  color: var(--long);
+  border-color: var(--long);
+  background: color-mix(in srgb, var(--long) 8%, transparent);
+}
+
+.badge[data-direction='short'] {
+  color: var(--short);
+  border-color: var(--short);
+  background: color-mix(in srgb, var(--short) 8%, transparent);
+}
+
+.rr {
+  font-size: 13px;
+}
+
+.rrUnit {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* ---- stat tiles ---- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.tileValue {
+  font-size: 19px;
+  margin-top: 4px;
+}
+
+.tileValue[data-color='amber'] {
+  color: var(--amber);
+}
+
+.tileValue[data-color='long'] {
+  color: var(--long);
+}
+
+.tileValue[data-color='short'] {
+  color: var(--short);
+}
+
+.tileCaption {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.warn {
+  display: block;
+  color: var(--amber);
+  margin-top: 4px;
+}
+
+/* ---- signal-agreement bar ---- */
+
+.confHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.confScore {
+  font-size: 12px;
+}
+
+.confScore[data-bucket='high'] {
+  color: var(--long);
+}
+
+.confScore[data-bucket='moderate'] {
+  color: var(--amber);
+}
+
+.confScore[data-bucket='low'] {
+  color: var(--short);
+}
+
+.confTrack {
+  height: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confFill {
+  height: 100%;
+  transition: width 0.4s;
+}
+
+.confFill[data-bucket='high'] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--long) 40%, transparent),
+    var(--long)
+  );
+}
+
+.confFill[data-bucket='moderate'] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--amber) 40%, transparent),
+    var(--amber)
+  );
+}
+
+.confFill[data-bucket='low'] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--short) 40%, transparent),
+    var(--short)
+  );
+}
+
+.penalties {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.penalties li {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 2px 0;
+}
+
+/* ---- NO TRADE state ---- */
+
+.noTrade {
+  background: var(--panel2);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.noTradeGate {
+  color: var(--short);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+}
+
+.noTradeReason {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.levels {
+  margin-top: 8px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.levelR {
+  color: var(--short);
+}
+
+.levelNow {
+  color: var(--text);
+}
+
+.levelS {
+  color: var(--long);
+}
+
+.levelNote {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 480px) {
+  .ticker {
+    font-size: 24px;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
