@@ -1,0 +1,58 @@
+.shell {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: var(--amber);
+}
+
+.tagline {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.nav {
+  font-size: 12px;
+}
+
+.error {
+  background: var(--panel);
+  border: 1px solid var(--short);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.error .mono {
+  color: var(--short);
+}
+
+.cardRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .cardRow {
+    grid-template-columns: 1fr;
+  }
+}
