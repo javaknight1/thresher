@@ -271,8 +271,16 @@ change is considered done.
   fundamentals are the deliberate exception — external context, not deep-linked.)
 - **API routes are Node runtime, not edge.** yahoo-finance2 v3 ships Deno-shimmed
   Node builds with no edge-safe entry, so it can't compile for Cloudflare's edge
-  runtime. This is also why the standard `next-on-pages` adapter doesn't work —
-  deployment needs the OpenNext Workers adapter (an open decision).
+  runtime. That's why deployment uses the **OpenNext Cloudflare Workers adapter**
+  (`@opennextjs/cloudflare`) rather than `next-on-pages`/Pages. It's wired and
+  verified in the local `workerd` runtime; `apps/web/open-next.config.ts` and
+  `wrangler.jsonc` hold the config. Build/preview/deploy: `pnpm --filter
+  @thresher/web cf-build | preview | deploy`.
+- **The methodology doc is embedded into the bundle at build time**
+  (`scripts/embed-methodology.mjs` → `lib/methodology-doc.generated.ts`) because
+  the Workers runtime has no filesystem. The embed runs automatically before
+  dev/build/test/deploy; run `pnpm --filter @thresher/web embed:methodology` to
+  refresh it by hand.
 - **The local dev server isn't permanent.** Closing it (or ending a session that
   started it) leaves the UI unable to reach the API. Run `pnpm dev` yourself in a
   terminal you control for day-to-day use.
@@ -282,8 +290,10 @@ change is considered done.
 M0 (engine) and M1 (web app + live data + UI + methodology pages) are **done,
 tested, and pushed** to `github.com/javaknight1/thresher` (branch `master`), with
 a company fundamentals panel added on top. Verified end-to-end against live Yahoo
-data. **Nothing is deployed yet** — blocked on the Cloudflare adapter decision
-and account setup in `MANUAL.md`.
+data, including in the local Cloudflare `workerd` runtime. The deploy path
+(OpenNext Workers adapter, R2 cache, `thresher.sharkfins.xyz`) is **wired and
+locally verified**; going live just needs the Cloudflare account steps in
+`MANUAL.md` (login, create the R2 bucket, attach the domain, `pnpm … deploy`).
 
 | Milestone | Scope | State |
 |---|---|---|

@@ -23,17 +23,35 @@ Status legend: ☐ todo · ☑ done (check items off as you complete them)
 > Until these exist, the app runs with cache/rate-limit disabled (in-memory
 > fallback, dev only). The API route works locally without Upstash.
 
-### ☐ Cloudflare Pages (hosting)
+### ☐ Cloudflare (hosting — Workers via the OpenNext adapter)
+
+The deploy path is **Cloudflare Workers** using `@opennextjs/cloudflare` (not
+Pages — yahoo-finance2 can't run on the edge runtime that Pages requires). All
+of this is already wired and verified locally; these are the account steps only
+you can do. Run the commands from `apps/web/`.
+
 1. Create a Cloudflare account at https://dash.cloudflare.com.
-2. Install + authenticate wrangler locally: `pnpm dlx wrangler login`
-   (opens a browser; needs your account).
-3. Create the Pages project (one-time):
-   `pnpm dlx wrangler pages project create thresher` (production branch: `master`).
-4. In the Cloudflare dashboard → Pages → thresher → **Settings → Environment
-   variables**, add the same variables as `.env.local` (Upstash, Sentry DSN,
-   PostHog key) for Production (and Preview if you want).
-5. Optional: connect the GitHub repo (javaknight1/thresher) for automatic
-   deploys on push, or let Claude deploy via `wrangler pages deploy`.
+2. Authenticate wrangler: `pnpm dlx wrangler login` (opens a browser).
+3. **Create the R2 cache bucket** (one-time — serves the prerendered
+   `/methodology` pages):
+   `pnpm exec wrangler r2 bucket create thresher-cache`
+4. **Set up the custom domain `thresher.sharkfins.xyz`:** add `sharkfins.xyz` as
+   a zone in the Cloudflare dashboard (Add a site → follow the steps to point its
+   nameservers at Cloudflare). The worker's `routes` config attaches the
+   subdomain automatically on deploy once the zone is active. *(If you'd rather
+   ship first and add the domain later, tell me and I'll drop the route so it
+   deploys to `thresher.<your-subdomain>.workers.dev`.)*
+5. **Production secrets** (only if you set up Upstash above): push them to the
+   worker — they are NOT read from `.env.local` in production:
+   ```
+   pnpm exec wrangler secret put UPSTASH_REDIS_REST_URL
+   pnpm exec wrangler secret put UPSTASH_REDIS_REST_TOKEN
+   ```
+   Without these the deployed worker uses in-memory cache/rate-limit per isolate
+   (fine for a few users; Upstash makes them shared and persistent).
+6. **Deploy:** `pnpm --filter @thresher/web deploy`
+   (runs the embed step, the OpenNext build, uploads the R2 cache, and publishes
+   the worker). Re-run this command for every subsequent deploy.
 
 ## Deferred — monitoring (skip while this is personal-use, revisit if it becomes a real SaaS)
 
@@ -58,9 +76,9 @@ When/if needed later:
 
 ## After every new key
 
-1. Add the value to `.env.local`.
+1. Add the value to `.env.local` (for local dev).
 2. Mirror the variable name (commented) in `.env.example` if it's new.
-3. Add it to Cloudflare Pages → Settings → Environment variables before the
+3. Push it to the deployed worker with `wrangler secret put <NAME>` before the
    next production deploy.
 4. Tell Claude the key exists (not the value) so the integration gets wired
    and smoke-tested.
