@@ -104,3 +104,23 @@ describe('MockProvider.getDaysToEarnings', () => {
     await expect(provider.getDaysToEarnings('NVDA')).resolves.toBeNull();
   });
 });
+
+describe('MockProvider.getProfile', () => {
+  const provider = new MockProvider();
+
+  it('returns a deterministic, fully-shaped profile', async () => {
+    const a = await provider.getProfile('MOCKLONG');
+    const b = await provider.getProfile('mocklong'); // case-insensitive
+    expect(a).toEqual(b);
+    expect(a.symbol).toBe('MOCKLONG');
+    expect(a.name).toBeTruthy();
+    expect(a.sector).toBeTruthy();
+    expect(a.peers.length).toBeGreaterThan(0);
+    expect(a.earnings.history.length).toBeGreaterThan(0);
+    expect(a.analyst).not.toBeNull();
+  });
+
+  it('throws UNKNOWN_SYMBOL for MOCKUNKNOWN', async () => {
+    await expect(provider.getProfile('MOCKUNKNOWN')).rejects.toThrow(/unknown symbol/i);
+  });
+});

@@ -12,7 +12,7 @@ import type { Bar, Timeframe } from '@thresher/engine';
 import { runAnalysis } from '../lib/analyze-service';
 import { MemoryBarCache } from '../lib/cache';
 import { MockProvider } from '../lib/providers/mock';
-import type { MarketDataProvider } from '../lib/contracts';
+import type { CompanyProfile, MarketDataProvider } from '../lib/contracts';
 import { WEB_CONFIG } from '../lib/config';
 
 /** Fixed clock: deterministic asOf/dataFreshness and cache freshness. */
@@ -209,6 +209,9 @@ describe('runAnalysis — caching', () => {
     }
     getDaysToEarnings(symbol: string, nowDate?: Date): Promise<number | null> {
       return this.inner.getDaysToEarnings(symbol, nowDate);
+    }
+    getProfile(symbol: string): Promise<CompanyProfile> {
+      return this.inner.getProfile(symbol);
     }
   }
 

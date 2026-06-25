@@ -43,6 +43,11 @@ test.describe('analyze smoke', () => {
 
     await expect(page.getByTestId('price-chart')).toBeVisible();
     await expect(page.getByTestId('freshness')).toBeVisible();
+
+    // Company context panel loads independently of the trade plan.
+    const company = page.getByTestId('company-panel');
+    await expect(company).toBeVisible({ timeout: 15_000 });
+    await expect(company).toContainText(/MOCKLONG/);
   });
 
   test('choppy symbol renders a refusal, families still shown', async ({ page }) => {
