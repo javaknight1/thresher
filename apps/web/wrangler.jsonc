@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "thresher",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-05-01",
+  // nodejs_compat: yahoo-finance2 needs Node built-ins.
+  // global_fetch_strictly_public: route the worker's own fetch() over the
+  // public internet (OpenNext requirement).
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Custom domain. Requires sharkfins.xyz to be an active zone on the Cloudflare
+  // account (custom_domain:true provisions the DNS record + cert). See MANUAL.md.
+  "routes": [{ "pattern": "thresher.sharkfins.xyz", "custom_domain": true }],
+  // Incremental cache for prerendered (SSG) pages — see open-next.config.ts.
+  // Create this bucket once: `wrangler r2 bucket create thresher-cache`.
+  "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "thresher-cache" }],
+  // Self-reference, required by OpenNext for cache/revalidation plumbing.
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "thresher" }],
+  "observability": { "enabled": true }
+}

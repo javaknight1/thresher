@@ -1,16 +1,16 @@
 /**
- * Server-only loader for the /methodology documentation pages.
+ * Loader for the /methodology documentation pages.
  *
- * Reads docs/THRESHER-METHODOLOGY.md from the repo at build time (all
- * methodology routes are statically generated) and splits it into sections
- * by its '## ' headings. The doc itself declares the site structure: each
- * Part I/II section is one page (methodology doc, "Docs site structure").
+ * The doc is embedded into the bundle at build time (lib/methodology-doc.generated.ts,
+ * produced by scripts/embed-methodology.mjs) and split into sections by its
+ * '## ' headings. We embed rather than read the filesystem because the
+ * Cloudflare Workers runtime has no filesystem. The doc itself declares the
+ * site structure: each Part I/II section is one page.
  *
  * Content is rendered from the doc, never paraphrased — the methodology doc
  * is the binding spec (CLAUDE.md), and II.10 is published verbatim.
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { METHODOLOGY_DOC } from './methodology-doc.generated';
 
 export type MethodologyPart = 'indicators' | 'engine';
 
@@ -56,29 +56,6 @@ const SLUG_MAPS: Record<MethodologyPart, Record<string, string>> = {
 const EXAMPLE_NUMBER = 'II.9';
 const LIMITATIONS_NUMBER = 'II.10';
 
-const DOC_RELATIVE_PATH = join('docs', 'THRESHER-METHODOLOGY.md');
-const MAX_WALK_UP = 8;
-
-/**
- * Resolve the doc by walking up from process.cwd(). In dev/build the cwd is
- * apps/web, so this finds ../../docs/THRESHER-METHODOLOGY.md; walking up makes
- * it robust to being invoked from the repo root (tests, scripts) as well.
- */
-function findDocPath(): string {
-  let dir = process.cwd();
-  for (let i = 0; i < MAX_WALK_UP; i += 1) {
-    const candidate = join(dir, DOC_RELATIVE_PATH);
-    if (existsSync(candidate)) return candidate;
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new Error(
-    `Could not locate ${DOC_RELATIVE_PATH} walking up from ${process.cwd()}. ` +
-      'The methodology pages render from that document.',
-  );
-}
-
 interface RawSection {
   number: string;
   title: string;
@@ -97,8 +74,7 @@ const SECTION_HEADING = /^## (I{1,2})\.(\d+)\s+(.+)$/;
 function parseDoc(): ParsedDoc {
   if (parsed) return parsed;
 
-  const raw = readFileSync(findDocPath(), 'utf8');
-  const lines = raw.split('\n');
+  const lines = METHODOLOGY_DOC.split('\n');
 
   const byNumber = new Map<string, RawSection>();
   const overviewLines: string[] = [];
