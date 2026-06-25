@@ -9,13 +9,14 @@ import { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { Timeframe } from '@thresher/engine';
-import type { AnalyzeResponse, ApiError } from '../lib/api-types';
+import type { AnalyzeResponse, ApiError, ProfileResponse } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
 import Controls from '../components/Controls';
 import TradeCard from '../components/TradeCard';
 import TradeLadder from '../components/TradeLadder';
 import TradeStory from '../components/TradeStory';
 import FamilyGrid from '../components/FamilyGrid';
+import CompanyPanel from '../components/CompanyPanel';
 import Disclaimer from '../components/Disclaimer';
 import styles from './page.module.css';
 
@@ -27,13 +28,13 @@ export default function AnalyzePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('swing');
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const run = useCallback(async (symbol: string, tf: Timeframe) => {
+  const loadAnalysis = useCallback(async (symbol: string, tf: Timeframe) => {
     setLoading(true);
     setError(null);
-    setActiveSymbol(symbol);
     try {
       const res = await fetch(
         `/api/v1/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`,
@@ -57,14 +58,37 @@ export default function AnalyzePage() {
     }
   }, []);
 
-  const onAnalyze = useCallback((symbol: string) => void run(symbol, timeframe), [run, timeframe]);
+  // Fundamentals load independently of the trade plan — a failure just hides the
+  // panel and never surfaces as a page error (the trade plan is what matters).
+  const loadProfile = useCallback(async (symbol: string) => {
+    setProfile(null);
+    try {
+      const res = await fetch(`/api/v1/profile?symbol=${encodeURIComponent(symbol)}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      setProfile((await res.json()) as ProfileResponse);
+    } catch {
+      setProfile(null);
+    }
+  }, []);
 
+  const onAnalyze = useCallback(
+    (symbol: string) => {
+      setActiveSymbol(symbol);
+      void loadAnalysis(symbol, timeframe);
+      void loadProfile(symbol);
+    },
+    [loadAnalysis, loadProfile, timeframe],
+  );
+
+  // Switching timeframe re-runs the analysis but not the (symbol-scoped) profile.
   const onTimeframe = useCallback(
     (tf: Timeframe) => {
       setTimeframe(tf);
-      if (activeSymbol) void run(activeSymbol, tf);
+      if (activeSymbol) void loadAnalysis(activeSymbol, tf);
     },
-    [activeSymbol, run],
+    [activeSymbol, loadAnalysis],
   );
 
   return (
@@ -113,6 +137,7 @@ export default function AnalyzePage() {
           />
           <TradeStory story={data.story} direction={data.direction} />
           <FamilyGrid families={data.families} composite={data.composite} />
+          {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
         </>
       )}
 
