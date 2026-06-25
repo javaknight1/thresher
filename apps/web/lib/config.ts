@@ -8,6 +8,8 @@ export const WEB_CONFIG = {
   cache: {
     /** design §2.1: intraday 15 min · daily 6 h · weekly 24 h */
     ttlSeconds: { intraday: 900, swing: 21_600, position: 86_400 } as Record<Timeframe, number>,
+    /** company fundamentals change ~daily — refresh every 12 h */
+    profileTtlSeconds: 43_200,
   },
   rateLimit: {
     /** design §2.1: 20 analyses/hr anonymous, 200/hr signed-in (Clerk arrives M2) */
@@ -31,5 +33,7 @@ export const WEB_CONFIG = {
     windowBars: 20,
   },
   chart: { bars: 130 },
+  /** company-context panel (display-only fundamentals — never feeds the engine) */
+  profile: { maxPeers: 6, maxEarningsQuarters: 4 },
   samples: ['NVDA', 'AAPL', 'TSLA', 'XOM', 'JPM', 'COIN'],
 } as const;

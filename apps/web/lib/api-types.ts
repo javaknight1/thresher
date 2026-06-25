@@ -3,6 +3,7 @@
  * The UI consumes exactly these shapes.
  */
 import type { AnalysisResult, Bar, Timeframe } from '@thresher/engine';
+import type { CompanyProfile } from './contracts';
 
 export interface ChartPayload {
   /** last ~130 bars (WEB_CONFIG.chart.bars) */
@@ -36,6 +37,19 @@ export interface AnalyzeResponse {
   flags: AnalysisResult['flags'];
   story: string;
   chart: ChartPayload;
+}
+
+/**
+ * GET /api/v1/profile response — display-only company context, a separate
+ * endpoint from analyze so a slow/flaky fundamentals fetch never blocks or
+ * breaks the trade plan. This data does NOT come from the engine.
+ */
+export interface ProfileResponse {
+  profile: CompanyProfile;
+  /** when the fundamentals were fetched (ISO) */
+  fetchedAt: string;
+  /** true when served past the profile TTL (stale-while-revalidate) */
+  stale: boolean;
 }
 
 export type ApiErrorCode =

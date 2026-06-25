@@ -6,11 +6,28 @@
  * tested piece is the pure weekday-counting helper `countTradingDays`.
  */
 import YahooFinance from 'yahoo-finance2';
+import type { QuoteSummaryResult } from 'yahoo-finance2/modules/quoteSummary-iface';
 import type { Bar, Timeframe } from '@thresher/engine';
 import { WEB_CONFIG } from '../config';
-import { ProviderError, type MarketDataProvider } from '../contracts';
+import {
+  ProviderError,
+  type CompanyProfile,
+  type EarningsQuarter,
+  type MarketDataProvider,
+} from '../contracts';
 
 const DAY_MS = 86_400_000;
+
+/** Coerce a maybe-undefined Yahoo number into a finite number or null. */
+function num(x: number | null | undefined): number | null {
+  return typeof x === 'number' && Number.isFinite(x) ? x : null;
+}
+
+/** Coerce a maybe-undefined/empty Yahoo string into a trimmed string or null. */
+function str(x: string | null | undefined): string | null {
+  const trimmed = x?.trim();
+  return trimmed ? trimmed : null;
+}
 
 /**
  * Heuristic match for "this symbol does not exist" errors. yahoo-finance2 has
@@ -106,5 +123,106 @@ export class YahooProvider implements MarketDataProvider {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Company identity + fundamentals (display-only context — never reaches the
+   * engine). The core quoteSummary call decides existence: an unknown symbol
+   * throws UNKNOWN_SYMBOL. Peers come from a separate best-effort call that is
+   * swallowed on failure, so a flaky recommendations endpoint never blanks the
+   * panel.
+   */
+  async getProfile(symbol: string): Promise<CompanyProfile> {
+    let summary: QuoteSummaryResult;
+    try {
+      summary = await this.yf.quoteSummary(symbol, {
+        modules: [
+          'price',
+          'assetProfile',
+          'summaryDetail',
+          'defaultKeyStatistics',
+          'financialData',
+          'calendarEvents',
+          'earningsHistory',
+        ],
+      });
+    } catch (err) {
+      if (err instanceof ProviderError) throw err;
+      throw toProviderError(symbol, err);
+    }
+
+    const price = summary.price;
+    const profile = summary.assetProfile;
+    const detail = summary.summaryDetail;
+    const stats = summary.defaultKeyStatistics;
+    const financial = summary.financialData;
+
+    const nextEarnings = summary.calendarEvents?.earnings?.earningsDate?.[0] ?? null;
+    const history: EarningsQuarter[] = (summary.earningsHistory?.history ?? [])
+      .slice(-WEB_CONFIG.profile.maxEarningsQuarters)
+      .reverse()
+      .map((q) => ({
+        quarter: q.quarter ? q.quarter.toISOString() : null,
+        epsActual: num(q.epsActual),
+        epsEstimate: num(q.epsEstimate),
+        surprisePercent: num(q.surprisePercent),
+      }));
+
+    // Analyst block is null unless there is at least a mean target or coverage.
+    const targetMean = num(financial?.targetMeanPrice);
+    const numAnalysts = num(financial?.numberOfAnalystOpinions);
+    const analyst =
+      targetMean !== null || numAnalysts !== null
+        ? {
+            targetMean,
+            targetHigh: num(financial?.targetHighPrice),
+            targetLow: num(financial?.targetLowPrice),
+            recommendation: str(financial?.recommendationKey),
+            numberOfAnalysts: numAnalysts,
+          }
+        : null;
+
+    let peers: string[] = [];
+    try {
+      const rec = await this.yf.recommendationsBySymbol(symbol);
+      peers = (rec.recommendedSymbols ?? [])
+        .map((r) => r.symbol)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0)
+        .slice(0, WEB_CONFIG.profile.maxPeers);
+    } catch {
+      peers = [];
+    }
+
+    return {
+      symbol: symbol.toUpperCase(),
+      name: str(price?.longName) ?? str(price?.shortName),
+      exchange: str(price?.exchangeName),
+      sector: str(profile?.sector),
+      industry: str(profile?.industry),
+      description: str(profile?.longBusinessSummary),
+      website: str(profile?.website),
+      currency: str(price?.currency),
+      marketCap: num(price?.marketCap),
+      fundamentals: {
+        trailingPE: num(detail?.trailingPE),
+        forwardPE: num(detail?.forwardPE),
+        trailingEps: num(stats?.trailingEps),
+        forwardEps: num(stats?.forwardEps),
+        beta: num(detail?.beta),
+        dividendYield: num(detail?.dividendYield),
+        pegRatio: num(stats?.pegRatio),
+        priceToBook: num(stats?.priceToBook),
+        fiftyTwoWeekHigh: num(detail?.fiftyTwoWeekHigh),
+        fiftyTwoWeekLow: num(detail?.fiftyTwoWeekLow),
+        averageVolume: num(detail?.averageVolume),
+        sharesOutstanding: num(stats?.sharesOutstanding),
+      },
+      earnings: {
+        nextDate: nextEarnings ? nextEarnings.toISOString() : null,
+        history,
+      },
+      analyst,
+      peers,
+    };
   }
 }
