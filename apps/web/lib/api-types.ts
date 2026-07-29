@@ -40,6 +40,28 @@ export interface AnalyzeResponse {
 }
 
 /**
+ * Partial analyze result for a valid ticker with too little price history for
+ * the engine (e.g. a recent IPO — the engine needs ≥ barsNeeded bars). It is a
+ * first-class 200 result, NOT an error: the UI still shows the chart, the price,
+ * and the company panel, and just says the full technical read isn't available
+ * yet. `status` discriminates it from a full AnalyzeResponse.
+ */
+export interface InsufficientHistoryResponse {
+  status: 'insufficient_history';
+  symbol: string;
+  timeframe: Timeframe;
+  asOf: string;
+  dataFreshness: string;
+  stale: boolean;
+  price: number;
+  /** bars actually available for this timeframe */
+  barsAvailable: number;
+  /** bars the engine needs before it will analyze */
+  barsNeeded: number;
+  chart: ChartPayload;
+}
+
+/**
  * GET /api/v1/profile response — display-only company context, a separate
  * endpoint from analyze so a slow/flaky fundamentals fetch never blocks or
  * breaks the trade plan. This data does NOT come from the engine.

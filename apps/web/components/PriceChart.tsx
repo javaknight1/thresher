@@ -23,9 +23,11 @@ import styles from './PriceChart.module.css';
 
 export interface PriceChartProps {
   chart: ChartPayload;
-  plan: Plan | null;
-  levels: AnalyzeResponse['levels'];
-  direction: Direction;
+  /** Trade overlays are optional: a too-new ticker has a chart but no analysis,
+   *  so the chart renders candles + SMAs alone (no entry/stop/target or S/R). */
+  plan?: Plan | null;
+  levels?: AnalyzeResponse['levels'] | null;
+  direction?: Direction;
 }
 
 /**
@@ -172,7 +174,8 @@ export default function PriceChart({ chart, plan, levels, direction }: PriceChar
     });
     sma50.setData(smaData(chart.bars, chart.sma50));
 
-    // Reference lines: trade levels when a plan exists; S/R readout on NO TRADE (§6.2).
+    // Reference lines: trade levels when a plan exists; S/R readout on NO TRADE
+    // (§6.2); none at all when there is no analysis yet (too-new ticker).
     const lineBase = { lineWidth: 1 as const, lineStyle: LineStyle.Dashed, axisLabelVisible: true };
     const priceLines = plan
       ? [
@@ -180,10 +183,12 @@ export default function PriceChart({ chart, plan, levels, direction }: PriceChar
           { ...lineBase, price: plan.stop, color: colors.short, title: 'STOP' },
           { ...lineBase, price: plan.target, color: colors.long, title: 'TARGET' },
         ]
-      : [
-          { ...lineBase, price: levels.resistance, color: colors.short, title: 'R' },
-          { ...lineBase, price: levels.support, color: colors.long, title: 'S' },
-        ];
+      : levels
+        ? [
+            { ...lineBase, price: levels.resistance, color: colors.short, title: 'R' },
+            { ...lineBase, price: levels.support, color: colors.long, title: 'S' },
+          ]
+        : [];
     for (const line of priceLines) candles.createPriceLine(line);
 
     api.timeScale().fitContent();
@@ -206,12 +211,12 @@ export default function PriceChart({ chart, plan, levels, direction }: PriceChar
     <section
       className={`panel ${styles.wrap}`}
       data-testid="price-chart"
-      aria-label={`Price chart with moving averages and ${
-        plan ? 'trade levels' : 'support and resistance levels'
-      } (${direction === 'none' ? 'no trade' : direction} reading)`}
+      aria-label={`Price chart with moving averages${
+        plan ? ' and trade levels' : levels ? ' and support and resistance levels' : ''
+      }${direction ? ` (${direction === 'none' ? 'no trade' : direction} reading)` : ''}`}
     >
       <div className={`kicker ${styles.label}`}>
-        PRICE · SMA20 · SMA50 · {plan ? 'TRADE LEVELS' : 'S/R LEVELS'}
+        PRICE · SMA20 · SMA50{plan ? ' · TRADE LEVELS' : levels ? ' · S/R LEVELS' : ''}
       </div>
       <div ref={hostRef} className={styles.host} />
     </section>

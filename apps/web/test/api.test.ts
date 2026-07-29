@@ -38,6 +38,7 @@ describe('runAnalysis — MOCKLONG/swing emits a LONG (§8 field-for-field)', ()
     const res = await run('MOCKLONG');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
+    if ('status' in res.body) throw new Error('expected a full analysis, got partial');
     const body = res.body;
 
     // Exact key set of the frozen §8 contract — nothing missing, nothing extra.
@@ -146,6 +147,7 @@ describe('runAnalysis — refusals are first-class results', () => {
     const res = await run('MOCKCHOP');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
+    if ('status' in res.body) throw new Error('expected a full analysis, got partial');
     expect(res.body.refusal).not.toBeNull();
     expect(res.body.refusal?.gate).toMatch(/^G[1-5]$/);
     expect(res.body.refusal?.reason.length).toBeGreaterThan(0);
@@ -171,15 +173,20 @@ describe('runAnalysis — error mapping', () => {
     expect(res.error.message).toContain(`$${WEB_CONFIG.guardrails.minPrice} floor`);
   });
 
-  it('MOCKNEW (too few bars) maps to INSUFFICIENT_HISTORY, not an uncaught 500', async () => {
+  it('MOCKNEW (too few bars) returns a partial result with a chart, not a 500', async () => {
     const res = await run('MOCKNEW');
-    expect(res.ok).toBe(false);
-    if (res.ok) return;
     // The engine THROWS on insufficient history; the service must convert that
-    // into a first-class error result rather than letting it escape as a 500.
-    expect(res.error.error).toBe('INSUFFICIENT_HISTORY');
-    expect(res.error.message).toMatch(/too new/i);
-    expect(res.error.message).toContain('MOCKNEW');
+    // into a first-class PARTIAL result (200) — never let it escape as a 500.
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect('status' in res.body).toBe(true);
+    if (!('status' in res.body)) return;
+    expect(res.body.status).toBe('insufficient_history');
+    expect(res.body.symbol).toBe('MOCKNEW');
+    expect(res.body.barsAvailable).toBeLessThan(res.body.barsNeeded);
+    // The chart still renders on the too-new page, so bars must be present.
+    expect(res.body.chart.bars.length).toBeGreaterThan(0);
+    expect(res.body.price).toBeGreaterThan(0);
   });
 });
 
@@ -188,6 +195,7 @@ describe('runAnalysis — earnings context (MOCKEARNINGS/swing)', () => {
     const res = await run('MOCKEARNINGS');
     expect(res.ok).toBe(true);
     if (!res.ok) return;
+    if ('status' in res.body) throw new Error('expected a full analysis, got partial');
     const body = res.body;
 
     // getDaysToEarnings = 1 ≤ the swing veto window → flag set.

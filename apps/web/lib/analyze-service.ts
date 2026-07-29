@@ -9,19 +9,17 @@
  */
 import { analyze, smaSeries, minBars, DEFAULT_CONFIG } from '@thresher/engine';
 import type { Bar, Timeframe } from '@thresher/engine';
-import type { AnalyzeResponse, ApiError, ChartPayload } from './api-types';
+import type {
+  AnalyzeResponse,
+  ApiError,
+  ChartPayload,
+  InsufficientHistoryResponse,
+} from './api-types';
 import { ProviderError } from './contracts';
 import type { BarCache, BarsWithFreshness, MarketDataProvider } from './contracts';
 import { getBarsWithFreshness } from './cache';
 import { checkGuardrails } from './guardrails';
 import { WEB_CONFIG } from './config';
-
-/** Plain-English bar cadence per timeframe, for user-facing messages. */
-const BAR_UNIT: Record<Timeframe, string> = {
-  intraday: 'hourly',
-  swing: 'daily',
-  position: 'weekly',
-};
 
 export interface RunAnalysisInput {
   symbol: string;
@@ -33,7 +31,7 @@ export interface RunAnalysisInput {
 }
 
 export type RunAnalysisResult =
-  | { ok: true; body: AnalyzeResponse }
+  | { ok: true; body: AnalyzeResponse | InsufficientHistoryResponse }
   | { ok: false; error: ApiError };
 
 /**
@@ -85,24 +83,24 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
   // 2b. Minimum history: the pure engine THROWS on too few bars (indicators
   // need ≥ minBars — snapshot.ts). That is correct engine behavior, but a throw
   // here would escape as an HTTP 500. A newly listed ticker is a valid stock,
-  // not an error — surface it as a first-class "too new" result so the UI can
-  // still show everything else (company panel, price) and just say so.
+  // not an error — return a first-class PARTIAL result (price + chart) so the
+  // UI still shows the chart and the company panel, and just says the full
+  // technical read isn't available for this timeframe yet.
   const needed = minBars(DEFAULT_CONFIG);
   if (fresh.bars.length < needed) {
-    const unit = BAR_UNIT[timeframe];
-    const hint =
-      timeframe === 'intraday'
-        ? 'check back as more history builds.'
-        : 'try the Intraday timeframe, or check back as more history builds.';
-    return {
-      ok: false,
-      error: {
-        error: 'INSUFFICIENT_HISTORY',
-        message:
-          `${symbol} is too new for a full technical read — it has only ${fresh.bars.length} ` +
-          `${unit} bars of price history and the engine needs at least ${needed}. ${hint}`,
-      },
+    const partial: InsufficientHistoryResponse = {
+      status: 'insufficient_history',
+      symbol,
+      timeframe,
+      asOf: now().toISOString(),
+      dataFreshness: fresh.fetchedAt,
+      stale: fresh.stale,
+      price: fresh.bars[fresh.bars.length - 1].c,
+      barsAvailable: fresh.bars.length,
+      barsNeeded: needed,
+      chart: buildChart(fresh.bars),
     };
+    return { ok: true, body: partial };
   }
 
   // 3. Earnings distance — best-effort by design: earnings lookup failures
