@@ -9,7 +9,12 @@ import { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { Timeframe } from '@thresher/engine';
-import type { AnalyzeResponse, ApiError, ProfileResponse } from '../lib/api-types';
+import type {
+  AnalyzeResponse,
+  ApiError,
+  InsufficientHistoryResponse,
+  ProfileResponse,
+} from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
 import Controls from '../components/Controls';
 import TradeCard from '../components/TradeCard';
@@ -17,12 +22,21 @@ import TradeLadder from '../components/TradeLadder';
 import TradeStory from '../components/TradeStory';
 import FamilyGrid from '../components/FamilyGrid';
 import CompanyPanel from '../components/CompanyPanel';
+import TooNew from '../components/TooNew';
 import Disclaimer from '../components/Disclaimer';
 import styles from './page.module.css';
 
 const PriceChart = dynamic(() => import('../components/PriceChart'), { ssr: false });
 
 type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
+
+/** The analyze route returns a full result or a partial "too new" one. */
+type AnalyzeData = AnalyzeResponse | InsufficientHistoryResponse;
+
+/** A recent listing with too little history returns the partial shape. */
+function isTooNew(d: AnalyzeData): d is InsufficientHistoryResponse {
+  return 'status' in d && d.status === 'insufficient_history';
+}
 
 /** Plain-English headline per error code — raw codes are jargon to a trader. */
 const ERROR_TITLES: Record<ErrorState['code'], string> = {
@@ -38,7 +52,7 @@ const ERROR_TITLES: Record<ErrorState['code'], string> = {
 export default function AnalyzePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('swing');
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
-  const [data, setData] = useState<AnalyzeResponse | null>(null);
+  const [data, setData] = useState<AnalyzeData | null>(null);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +74,7 @@ export default function AnalyzePage() {
         });
         return;
       }
-      setData((await res.json()) as AnalyzeResponse);
+      setData((await res.json()) as AnalyzeData);
     } catch {
       setData(null);
       setError({ code: 'NETWORK', message: 'Could not reach the analysis service.' });
@@ -128,23 +142,23 @@ export default function AnalyzePage() {
         freshness={data ? { dataFreshness: data.dataFreshness, stale: data.stale } : null}
       />
 
-      {/* "Too new" is a first-class outcome, not a failure: a calm notice, and
-          the company panel below still renders everything else about the stock. */}
-      {error && error.code === 'INSUFFICIENT_HISTORY' && (
-        <div data-testid="too-new-notice" className={styles.notice}>
-          <div className={styles.noticeTitle}>{ERROR_TITLES[error.code]}</div>
-          <div>{error.message}</div>
-        </div>
-      )}
-
-      {error && error.code !== 'INSUFFICIENT_HISTORY' && (
+      {error && (
         <div role="alert" data-testid="error-banner" className={styles.error}>
           <div className={styles.errorTitle}>{ERROR_TITLES[error.code]}</div>
           <div>{error.message}</div>
         </div>
       )}
 
-      {data && !error && (
+      {/* Too-new is a first-class partial result: no trade plan, but the chart
+          still renders, and the company panel below shows the rest. */}
+      {data && !error && isTooNew(data) && (
+        <>
+          <TooNew data={data} timeframe={timeframe} onSelectTimeframe={onTimeframe} />
+          <PriceChart chart={data.chart} />
+        </>
+      )}
+
+      {data && !error && !isTooNew(data) && (
         <>
           <div className={styles.cardRow}>
             <TradeCard data={data} />

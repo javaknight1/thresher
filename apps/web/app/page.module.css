@@ -51,23 +51,6 @@
   margin-bottom: 4px;
 }
 
-/* Calm, non-alarming notice for first-class "we can't fully analyze yet" states
-   (e.g. a newly listed ticker) — distinct from the red error banner. */
-.notice {
-  background: var(--panel);
-  border: 1px solid var(--amber);
-  border-radius: 10px;
-  padding: 14px 16px;
-  color: var(--text);
-  font-size: 13.5px;
-}
-
-.noticeTitle {
-  color: var(--amber);
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
 .cardRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
