@@ -9,6 +9,7 @@
  *   MOCKCHOP     directionless chop — the engine REFUSES on swing
  *   MOCKUNKNOWN  throws ProviderError('UNKNOWN_SYMBOL')
  *   MOCKCHEAP    trades around $1 — trips the price guardrail
+ *   MOCKNEW      only 31 bars — too new for the engine (insufficient history)
  *   MOCKEARNINGS generic series; getDaysToEarnings returns 1
  *   anything else → seeded generic series (passes guardrails)
  */
@@ -23,6 +24,8 @@ import { WEB_CONFIG } from '../config';
 
 /** Engine needs ≥130 bars (minBarsFactor × MACD slow); 300 gives headroom. */
 const BAR_COUNT = 300;
+/** A newly listed ticker: too few bars for the engine (mirrors a recent IPO). */
+const NEW_LISTING_BAR_COUNT = 31;
 /** Fixed epoch so series never depend on wall-clock time. */
 const EPOCH_START = Date.UTC(2024, 0, 1);
 const BAR_MS: Record<Timeframe, number> = {
@@ -246,7 +249,9 @@ export class MockProvider implements MarketDataProvider {
     if (sym === 'MOCKUNKNOWN') {
       throw new ProviderError('UNKNOWN_SYMBOL', `unknown symbol "${symbol}"`);
     }
-    return generateBars(sym, timeframe);
+    const bars = generateBars(sym, timeframe);
+    // A brand-new listing has too little history for the engine to run.
+    return sym === 'MOCKNEW' ? bars.slice(-NEW_LISTING_BAR_COUNT) : bars;
   }
 
   async getDaysToEarnings(symbol: string): Promise<number | null> {

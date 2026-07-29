@@ -170,6 +170,17 @@ describe('runAnalysis — error mapping', () => {
     expect(res.error.error).toBe('UNTRADEABLE_SYMBOL');
     expect(res.error.message).toContain(`$${WEB_CONFIG.guardrails.minPrice} floor`);
   });
+
+  it('MOCKNEW (too few bars) maps to INSUFFICIENT_HISTORY, not an uncaught 500', async () => {
+    const res = await run('MOCKNEW');
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    // The engine THROWS on insufficient history; the service must convert that
+    // into a first-class error result rather than letting it escape as a 500.
+    expect(res.error.error).toBe('INSUFFICIENT_HISTORY');
+    expect(res.error.message).toMatch(/too new/i);
+    expect(res.error.message).toContain('MOCKNEW');
+  });
 });
 
 describe('runAnalysis — earnings context (MOCKEARNINGS/swing)', () => {
