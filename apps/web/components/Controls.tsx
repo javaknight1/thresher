@@ -19,10 +19,17 @@ export interface ControlsProps {
   freshness: { dataFreshness: string; stale: boolean } | null;
 }
 
-const TIMEFRAMES: ReadonlyArray<{ key: Timeframe; label: string }> = [
-  { key: 'intraday', label: 'Intraday' },
-  { key: 'swing', label: 'Swing' },
-  { key: 'position', label: 'Position' },
+/**
+ * The three analyzed timeframes, labelled by candle cadence (what the user
+ * picks) with the trade horizon as the secondary note. Each still drives the
+ * full engine at its interval — intraday=1h, swing=1d, position=1wk
+ * (WEB_CONFIG.provider.lookback). Adding finer candles (1m/5m/15m) would need
+ * new methodology constants, so the set stays at these three.
+ */
+const TIMEFRAMES: ReadonlyArray<{ key: Timeframe; label: string; horizon: string }> = [
+  { key: 'intraday', label: 'Hourly', horizon: 'intraday' },
+  { key: 'swing', label: 'Daily', horizon: 'swing' },
+  { key: 'position', label: 'Weekly', horizon: 'position' },
 ];
 
 /** Tickers only: uppercase letters, dots, dashes. */
@@ -74,16 +81,18 @@ export default function Controls({
         >
           {loading ? 'Analyzing…' : 'Analyze'}
         </button>
-        <div className={styles.pills} role="group" aria-label="timeframe">
+        <div className={styles.pills} role="group" aria-label="candle timeframe">
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf.key}
               data-testid={`tf-${tf.key}`}
               className={`${styles.pill} ${timeframe === tf.key ? styles.pillActive : ''}`}
               aria-pressed={timeframe === tf.key}
+              title={`${tf.label} candles · ${tf.horizon} horizon`}
               onClick={() => onTimeframe(tf.key)}
             >
               {tf.label}
+              <span className={styles.pillSub}>{tf.horizon}</span>
             </button>
           ))}
         </div>
