@@ -206,6 +206,53 @@
   color: var(--text);
 }
 
+.gatesExplainer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.gatesIntro {
+  margin: 4px 0 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.gateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.gateItem,
+.gateItemFailed {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.gateItem .mono,
+.gateItemFailed .mono {
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.gateItemFailed {
+  color: var(--text);
+}
+
+.gateItemFailed .mono {
+  color: var(--short);
+}
+
+.gateFailedTag {
+  color: var(--short);
+  font-size: 11px;
+}
+
 .levels {
   margin-top: 8px;
   font-size: 13px;
