@@ -24,6 +24,17 @@ const PriceChart = dynamic(() => import('../components/PriceChart'), { ssr: fals
 
 type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
 
+/** Plain-English headline per error code — raw codes are jargon to a trader. */
+const ERROR_TITLES: Record<ErrorState['code'], string> = {
+  INVALID_REQUEST: 'Check the ticker',
+  UNKNOWN_SYMBOL: 'Ticker not found',
+  UNTRADEABLE_SYMBOL: 'Too illiquid to analyze',
+  INSUFFICIENT_HISTORY: 'Too new for a full technical read',
+  RATE_LIMITED: 'Too many requests',
+  DATA_UNAVAILABLE: 'Market data unavailable',
+  NETWORK: 'Can’t reach the service',
+};
+
 export default function AnalyzePage() {
   const [timeframe, setTimeframe] = useState<Timeframe>('swing');
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
@@ -117,9 +128,19 @@ export default function AnalyzePage() {
         freshness={data ? { dataFreshness: data.dataFreshness, stale: data.stale } : null}
       />
 
-      {error && (
+      {/* "Too new" is a first-class outcome, not a failure: a calm notice, and
+          the company panel below still renders everything else about the stock. */}
+      {error && error.code === 'INSUFFICIENT_HISTORY' && (
+        <div data-testid="too-new-notice" className={styles.notice}>
+          <div className={styles.noticeTitle}>{ERROR_TITLES[error.code]}</div>
+          <div>{error.message}</div>
+        </div>
+      )}
+
+      {error && error.code !== 'INSUFFICIENT_HISTORY' && (
         <div role="alert" data-testid="error-banner" className={styles.error}>
-          <span className="mono">{error.code}</span> — {error.message}
+          <div className={styles.errorTitle}>{ERROR_TITLES[error.code]}</div>
+          <div>{error.message}</div>
         </div>
       )}
 
@@ -137,9 +158,12 @@ export default function AnalyzePage() {
           />
           <TradeStory story={data.story} direction={data.direction} />
           <FamilyGrid families={data.families} composite={data.composite} />
-          {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
         </>
       )}
+
+      {/* Company context loads independently of the trade plan, so it shows even
+          when the engine can't run (e.g. a brand-new listing). */}
+      {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
 
       <Disclaimer />
     </div>
