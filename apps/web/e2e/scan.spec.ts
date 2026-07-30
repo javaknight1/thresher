@@ -71,6 +71,15 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible();
   });
 
+  test('the selected tab persists across a reload via the URL', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('scan-tab-swing').click();
+    await expect(page).toHaveURL(/[?&]tab=swing/);
+
+    await page.reload();
+    await expect(page.getByTestId('scan-tab-swing')).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('the Search button navigates to the Analyze view', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('search-button').click();

@@ -169,6 +169,26 @@
   color: var(--amber);
 }
 
+.profileError {
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.retry {
+  background: transparent;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
 .error {
   background: var(--panel);
   border: 1px solid var(--short);

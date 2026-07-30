@@ -62,6 +62,7 @@ export default function AnalyzeApp() {
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeData | null>(null);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [profileFailed, setProfileFailed] = useState(false);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -95,14 +96,20 @@ export default function AnalyzeApp() {
   // panel and never surfaces as a page error (the trade plan is what matters).
   const loadProfile = useCallback(async (symbol: string) => {
     setProfile(null);
+    setProfileFailed(false);
     try {
       const res = await fetch(`/api/v1/profile?symbol=${encodeURIComponent(symbol)}`, {
         cache: 'no-store',
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setProfileFailed(true);
+        return;
+      }
       setProfile((await res.json()) as ProfileResponse);
     } catch {
-      setProfile(null);
+      // Surface the failure instead of silently hiding the panel, so a flaky
+      // fundamentals fetch is visible (and retryable) rather than a mystery.
+      setProfileFailed(true);
     }
   }, []);
 
@@ -210,6 +217,14 @@ export default function AnalyzeApp() {
       {/* Company context loads independently of the trade plan, so it shows even
           when the engine can't run (e.g. a brand-new listing). */}
       {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
+      {!profile && profileFailed && activeSymbol && (
+        <div data-testid="profile-error" className={styles.profileError}>
+          Couldn’t load company details for {activeSymbol}.{' '}
+          <button className={styles.retry} onClick={() => void loadProfile(activeSymbol)}>
+            Retry
+          </button>
+        </div>
+      )}
 
       <Disclaimer />
     </div>

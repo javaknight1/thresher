@@ -7,8 +7,9 @@
  * morning?" view — and the three per-candle tabs drill into one size. Filters
  * and sort shape the table client-side; the scan-level counts are unchanged.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type { ApiError, ScanResponse, ScanRow } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
@@ -32,6 +33,11 @@ const ERROR_TITLES: Record<ErrorState['code'], string> = {
 };
 
 const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
+
+/** A valid board view = 'top' or one of the three timeframes. */
+function isView(v: string | null): v is View {
+  return v === 'top' || (TF_VIEWS as readonly string[]).includes(v ?? '');
+}
 
 const TABS: ReadonlyArray<{ key: View; label: string }> = [
   { key: 'top', label: 'Top' },
@@ -85,8 +91,20 @@ function mergeTop(boards: ScanResponse[]): ScanResponse {
   };
 }
 
-export default function ScanPage() {
-  const [view, setView] = useState<View>('top');
+function ScanApp() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Persist the selected tab in the URL (?tab=) so a browser refresh keeps the
+  // view instead of snapping back to Top, and the board is shareable.
+  const tabParam = searchParams.get('tab');
+  const [view, setView] = useState<View>(isView(tabParam) ? tabParam : 'top');
+  const selectView = useCallback(
+    (v: View) => {
+      setView(v);
+      router.replace(v === 'top' ? '/' : `/?tab=${v}`, { scroll: false });
+    },
+    [router],
+  );
   const [board, setBoard] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -170,7 +188,7 @@ export default function ScanPage() {
             data-testid={`scan-tab-${t.key}`}
             className={`${styles.scanTab} ${view === t.key ? styles.scanTabActive : ''}`}
             aria-pressed={view === t.key}
-            onClick={() => setView(t.key)}
+            onClick={() => selectView(t.key)}
           >
             {t.label}
           </button>
@@ -267,5 +285,14 @@ export default function ScanPage() {
 
       <Disclaimer />
     </div>
+  );
+}
+
+// useSearchParams (the ?tab= persistence) needs a Suspense boundary above it.
+export default function ScanPage() {
+  return (
+    <Suspense>
+      <ScanApp />
+    </Suspense>
   );
 }
