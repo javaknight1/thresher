@@ -105,6 +105,12 @@ export default function PriceChart({ chart, plan, levels, direction }: PriceChar
     const api = createChart(host, {
       width: host.clientWidth,
       height: host.clientHeight,
+      // Static chart: the view is fitted to the data and cannot be panned or
+      // zoomed, so the user can never scroll/scale out past the bars into empty
+      // space. Crosshair (hover readout) stays — it doesn't change the bounds.
+      handleScroll: false,
+      handleScale: false,
+      kineticScroll: { mouse: false, touch: false },
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: colors.muted,
@@ -123,6 +129,10 @@ export default function PriceChart({ chart, plan, levels, direction }: PriceChar
         borderColor: colors.border,
         timeVisible: intradayBars,
         secondsVisible: false,
+        // Pin the edges so the data always fills the pane exactly.
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        lockVisibleTimeRangeOnResize: true,
       },
       crosshair: {
         vertLine: { color: colors.muted, labelBackgroundColor: colors.border },
