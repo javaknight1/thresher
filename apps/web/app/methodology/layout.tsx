@@ -16,10 +16,10 @@ export default function MethodologyLayout({ children }: { children: ReactNode })
   const engine = listSections('engine');
 
   return (
-    <div className={styles.shell}>
+    <>
       <SiteHeader showBack />
-
-      <div className={styles.body}>
+      <div className={styles.shell}>
+        <div className={styles.body}>
         <nav className={`panel ${styles.nav}`} aria-label="Methodology sections">
           <Link href="/methodology" className={styles.navLink}>
             Overview &amp; pipeline
@@ -67,7 +67,8 @@ export default function MethodologyLayout({ children }: { children: ReactNode })
         </nav>
 
         <main>{children}</main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

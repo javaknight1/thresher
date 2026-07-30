@@ -164,11 +164,11 @@ function ScanView() {
   const showClosedHint = (view === 'intraday' || view === 'top') && !isUsMarketOpen(new Date());
 
   return (
-    <div className={styles.shell}>
+    <>
       <OnboardingGate />
       <SiteHeader />
-
-      <div className={styles.scanTabs} role="group" aria-label="board view">
+      <div className={styles.shell}>
+        <div className={styles.scanTabs} role="group" aria-label="board view">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -270,8 +270,9 @@ function ScanView() {
         <ScanBoard board={displayed} showTimeframe={view === 'top'} />
       )}
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </>
   );
 }
 

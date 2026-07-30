@@ -15,8 +15,9 @@ export const metadata = {
 
 export default function BrokeragePage() {
   return (
-    <div className={styles.page} data-testid="brokerage-page">
+    <>
       <SiteHeader />
+      <div className={styles.page} data-testid="brokerage-page">
 
       <section className={styles.intro}>
         <div className={styles.kicker}>brokerages</div>
@@ -47,6 +48,7 @@ export default function BrokeragePage() {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }

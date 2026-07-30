@@ -151,8 +151,9 @@ export default function AnalyzeApp() {
   }, [urlSymbol, urlTf, run]);
 
   return (
-    <div className={styles.shell}>
+    <>
       <SiteHeader />
+      <div className={styles.shell}>
 
       <Controls
         onAnalyze={onAnalyze}
@@ -210,6 +211,7 @@ export default function AnalyzeApp() {
       )}
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }

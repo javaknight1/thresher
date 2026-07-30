@@ -41,8 +41,9 @@ const COMING = [
 
 export default function DashboardPage() {
   return (
-    <div className={styles.page} data-testid="dashboard-page">
+    <>
       <SiteHeader />
+      <div className={styles.page} data-testid="dashboard-page">
 
       <section className={styles.intro}>
         <h1 className={styles.title}>Dashboard</h1>
@@ -74,6 +75,7 @@ export default function DashboardPage() {
       </section>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }

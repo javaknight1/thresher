@@ -3,6 +3,15 @@
  * first-login onboarding wizard (the wizard shows these sections as cards; the
  * guide page renders them plus a glossary and the honest-limits note).
  */
+export type CoverArt =
+  | 'candles'
+  | 'waves'
+  | 'grid'
+  | 'target'
+  | 'gauge'
+  | 'shield'
+  | 'horizon';
+
 export interface GuideSection {
   id: string;
   title: string;
@@ -10,8 +19,8 @@ export interface GuideSection {
   lead: string;
   /** supporting bullet points */
   points: string[];
-  /** cover-gradient key for the wizard card ('a'..'d') */
-  cover: 'a' | 'b' | 'c' | 'd';
+  /** cover-art key for the wizard card */
+  cover: CoverArt;
 }
 
 export const GUIDE_SECTIONS: readonly GuideSection[] = [
@@ -23,7 +32,19 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
       'It never forces a trade: a low-agreement setup returns an honest “no trade”, not a weak one.',
       'Everything it shows is auditable — each number links to the methodology behind it.',
     ],
-    cover: 'a',
+    cover: 'candles',
+  },
+  {
+    id: 'families',
+    title: 'How it reads the chart',
+    lead: 'Thresher doesn’t rely on one indicator. It scores four independent “families” of signals and combines their votes — a trade needs them to broadly agree.',
+    points: [
+      'Trend — is price making higher highs (or lower lows)?',
+      'Momentum — is the move gaining or losing steam?',
+      'Volume — is real participation behind the move?',
+      'Structure — where are the support/resistance levels?',
+    ],
+    cover: 'waves',
   },
   {
     id: 'board',
@@ -37,7 +58,7 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
       'Quality — the ranking score, (Agree ÷ 100) × R:R.',
       'The counts (“42 refused”) show how few names qualify at once — that’s normal.',
     ],
-    cover: 'b',
+    cover: 'grid',
   },
   {
     id: 'plan',
@@ -46,10 +67,22 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
     points: [
       'Entry, Stop, and Target each show the reasoning (“basis”) for the level.',
       'R:R ties it together: you risk 1R to make the reward, in R.',
-      'Agreement is the confidence read — signal agreement, still not a win rate.',
-      'Illustrative EV = (Agree ÷ 100) × R:R minus the rest — a quality check, not a promised return, until real outcomes are measured.',
+      'Long: stop sits below entry, target above. Short mirrors it.',
+      'Size the position yourself — Thresher gives the levels, not your risk budget.',
     ],
-    cover: 'c',
+    cover: 'target',
+  },
+  {
+    id: 'terms',
+    title: 'The key terms',
+    lead: 'A few words you’ll see everywhere. None of them is a promise about the future.',
+    points: [
+      'R — one unit of risk (entry → stop). R:R — how many R the target is away.',
+      'Agreement (Confidence) — how strongly the four families agree, 0–100. Not a win rate.',
+      'Quality — the board’s sort score: (Agreement ÷ 100) × R:R.',
+      'Illustrative EV — expected value using agreement as a stand-in probability — a quality check, not a forecast, until outcomes are measured.',
+    ],
+    cover: 'gauge',
   },
   {
     id: 'gates',
@@ -62,7 +95,18 @@ export const GUIDE_SECTIONS: readonly GuideSection[] = [
       'Expected value — does the edge beat break-even?',
       'Event risk — is an earnings report too close?',
     ],
-    cover: 'd',
+    cover: 'shield',
+  },
+  {
+    id: 'honest',
+    title: 'The honest part',
+    lead: 'Agreement and illustrative EV measure how the signals line up — not the future. Thresher reads only price and volume; it can’t see news, fundamentals, or what happens next.',
+    points: [
+      'Confidence is “signal agreement”, never a promised win rate.',
+      'Nothing here is financial advice — the decision, and the risk, are yours.',
+      'You’re ready. Open the board and start exploring.',
+    ],
+    cover: 'horizon',
   },
 ];
 

@@ -9,6 +9,7 @@
  */
 import { useState } from 'react';
 import { GUIDE_SECTIONS } from '../lib/guide-content';
+import WizardCover from './WizardCover';
 import styles from './OnboardingWizard.module.css';
 
 export interface OnboardingWizardProps {
@@ -24,11 +25,14 @@ export default function OnboardingWizard({ onClose }: OnboardingWizardProps) {
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" data-testid="onboarding">
       <div className={styles.card}>
-        <div className={`${styles.cover} ${styles[`cover_${step.cover}`]}`}>
-          <span className={styles.coverKicker}>Welcome to Thresher</span>
-          <span className={styles.coverStep} data-testid="onboarding-progress">
-            {i + 1} / {steps.length}
-          </span>
+        <div className={styles.cover}>
+          <WizardCover art={step.cover} />
+          <div className={styles.coverOverlay}>
+            <span className={styles.coverKicker}>Welcome to Thresher</span>
+            <span className={styles.coverStep} data-testid="onboarding-progress">
+              {i + 1} / {steps.length}
+            </span>
+          </div>
         </div>
 
         <div className={styles.body}>

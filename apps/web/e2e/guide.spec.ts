@@ -13,13 +13,15 @@ test('the intro wizard opens, steps through, and closes', async ({ page }) => {
 
   const wizard = page.getByTestId('onboarding');
   await expect(wizard).toBeVisible();
-  await expect(page.getByTestId('onboarding-progress')).toHaveText('1 / 4');
 
-  // Step to the last card, then finish.
-  await page.getByTestId('onboarding-next').click();
-  await page.getByTestId('onboarding-next').click();
-  await page.getByTestId('onboarding-next').click();
-  await expect(page.getByTestId('onboarding-progress')).toHaveText('4 / 4');
+  // Read the total step count and advance to the last card.
+  const progress = (await page.getByTestId('onboarding-progress').textContent()) ?? '';
+  const total = Number(progress.split('/')[1].trim());
+  expect(total).toBeGreaterThan(1);
+  for (let k = 1; k < total; k++) {
+    await page.getByTestId('onboarding-next').click();
+  }
+  await expect(page.getByTestId('onboarding-done')).toBeVisible();
   await page.getByTestId('onboarding-done').click();
   await expect(wizard).toHaveCount(0);
 });
