@@ -93,8 +93,16 @@ export interface ScanRow {
   entry: number;
   stop: number;
   target: number;
+  /** move from entry to target / stop, as percentages (design plan fields) */
+  rewardPct: number;
+  riskPct: number;
+  /** short human-readable basis for the stop and target levels */
+  stopBasis: string;
+  targetBasis: string;
   /** one-line driver (first sentence of the engine story) */
   driver: string;
+  /** the full engine story — shown when a board row is expanded */
+  story: string;
   /**
    * Which candle size produced this setup. The per-timeframe board leaves this
    * unset (the board carries the timeframe); the aggregated "Top" view sets it

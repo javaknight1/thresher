@@ -115,7 +115,12 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
       entry: plan.entry,
       stop: plan.stop,
       target: plan.target,
+      rewardPct: plan.rewardPct,
+      riskPct: plan.riskPct,
+      stopBasis: plan.stopBasis,
+      targetBasis: plan.targetBasis,
       driver: firstSentence(body.story),
+      story: body.story,
     });
   }
 

@@ -13,7 +13,12 @@ function row(symbol: string, direction: 'long' | 'short', confidence: number, rr
     entry: 100,
     stop: direction === 'long' ? 95 : 105,
     target: direction === 'long' ? 110 : 90,
+    rewardPct: 10,
+    riskPct: 5,
+    stopBasis: 'ATR',
+    targetBasis: 'pivot',
     driver: `${symbol} driver`,
+    story: `${symbol} full story.`,
   };
 }
 

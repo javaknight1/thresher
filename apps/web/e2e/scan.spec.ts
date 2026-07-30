@@ -21,12 +21,23 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('disclaimer')).toBeVisible();
   });
 
-  test('a row deep-links into the Analyze view and runs it', async ({ page }) => {
+  test('clicking a row expands an inline detail drawer', async ({ page }) => {
+    await page.goto('/');
+    const bias = page.getByTestId('scan-bias-MOCKLONG');
+    await expect(bias).toBeVisible({ timeout: 30_000 });
+
+    // Clicking the row (a non-link cell) expands the drawer, it does not navigate.
+    await bias.click();
+    await expect(page.getByTestId('scan-detail-MOCKLONG')).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('the symbol link and drawer link open the full Analyze view', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
-    // Click the bias cell (not the symbol link) to prove the WHOLE row navigates.
-    await page.getByTestId('scan-bias-MOCKLONG').click();
+    // The symbol is a link into the full per-symbol view.
+    await page.getByTestId('scan-row-MOCKLONG').getByRole('link').first().click();
     await expect(page).toHaveURL(/\/analyze\?symbol=MOCKLONG/);
 
     const badge = page.getByTestId('direction-badge');

@@ -137,6 +137,67 @@
   cursor: help;
 }
 
+.caret {
+  color: var(--muted);
+  text-align: center;
+  width: 24px;
+  font-size: 11px;
+}
+
+.rowOpen {
+  background: var(--panel);
+}
+
+.detailRow {
+  background: var(--panel);
+}
+
+.detailCell {
+  padding: 0 12px 14px !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 4px 2px;
+}
+
+.detailLevels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.detailLevels b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.detailStory {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  max-width: 70ch;
+}
+
+.detailLink {
+  align-self: flex-start;
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.detailLink:hover {
+  text-decoration: underline;
+}
+
 .driverCol {
   color: var(--muted);
   font-size: 12px;
