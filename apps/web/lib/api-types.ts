@@ -88,7 +88,10 @@ export interface ScanRow {
   confidenceBucket: AnalysisResult['confidence']['bucket'];
   /** reward:risk of the plan */
   rr: number;
-  /** quality rank = (confidence/100) × rr — the sort key (design §6.3) */
+  /** Setup Score 0–100 — the value metric (see lib/setup-score). The board's
+   *  default sort key. A relative quality blend, not a win rate or return. */
+  score: number;
+  /** quality rank = (confidence/100) × rr — kept alongside Score (design §6.3) */
   qualityRank: number;
   price: number;
   /** the actual trade levels, so the board is directly actionable */

@@ -60,8 +60,20 @@ export const WEB_CONFIG = {
     topN: 10,
     /** concurrent analyses in flight during a scan (throttle Yahoo) */
     concurrency: 5,
-    /** R:R at/above which a row is flagged as an outlier to sanity-check
-     *  (display-only — does NOT change the (C/100)×RR ranking) */
+    /** R:R at/above which a row is flagged as an outlier to sanity-check */
     outlierRR: 6,
+    /**
+     * Setup Score (0–100) — the board's "how valuable is this trade" metric.
+     * A relative blend of illustrative EV, signal agreement, and structure
+     * (R:R), minus deductions for risk flags EV can't see. NOT a win rate or a
+     * predicted return. These are versioned weights — tune deliberately.
+     * (EV floor = gates.evMargin, R:R floor = gates.minRR, from the engine.)
+     */
+    setupScore: {
+      weights: { ev: 0.45, agreement: 0.3, rr: 0.25 }, // sum to 1
+      evCap: 2.5, // illustrative EV (in R) that earns full EV credit
+      rrCap: 4, // R:R that earns full structure credit
+      deduct: { earnings: 12, overhead: 6, outlier: 8 }, // points off for risk flags
+    },
   },
 } as const;

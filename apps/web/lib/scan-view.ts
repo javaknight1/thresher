@@ -6,7 +6,7 @@
 import type { ScanRow } from './api-types';
 
 export type DirectionFilter = 'all' | 'long' | 'short';
-export type SortKey = 'quality' | 'rr' | 'confidence';
+export type SortKey = 'score' | 'quality' | 'rr' | 'confidence';
 
 export interface ScanView {
   direction: DirectionFilter;
@@ -21,10 +21,11 @@ export const DEFAULT_VIEW: ScanView = {
   direction: 'all',
   minRR: 0,
   minConfidence: 0,
-  sort: 'quality',
+  sort: 'score',
 };
 
 const SORT_VALUE: Record<SortKey, (r: ScanRow) => number> = {
+  score: (r) => r.score,
   quality: (r) => r.qualityRank,
   rr: (r) => r.rr,
   confidence: (r) => r.confidence,

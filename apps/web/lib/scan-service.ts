@@ -12,6 +12,7 @@ import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse, ScanRow } from './api-types';
 import type { BarCache, MarketDataProvider } from './contracts';
 import { runAnalysis } from './analyze-service';
+import { setupScore } from './setup-score';
 import { WEB_CONFIG } from './config';
 
 const SYMBOL_PATTERN = /^[A-Z][A-Z.-]{0,9}$/;
@@ -111,6 +112,13 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
       confidence,
       confidenceBucket: body.confidence.bucket,
       rr,
+      score: setupScore({
+        ev: plan.ev.value,
+        confidence,
+        rr,
+        earningsInWindow: body.flags.earningsInWindow,
+        overheadWarning: plan.overheadWarning,
+      }),
       qualityRank: (confidence / 100) * rr,
       price: body.price,
       entry: plan.entry,
@@ -125,7 +133,7 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
     });
   }
 
-  rows.sort((a, b) => b.qualityRank - a.qualityRank);
+  rows.sort((a, b) => b.score - a.score);
 
   return {
     timeframe,

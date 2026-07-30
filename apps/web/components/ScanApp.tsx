@@ -55,6 +55,7 @@ const DIRECTION_FILTERS: ReadonlyArray<{ key: DirectionFilter; label: string }> 
 
 const RR_FLOORS = [0, 1.5, 2, 3] as const;
 const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
+  { key: 'score', label: 'Score' },
   { key: 'quality', label: 'Quality' },
   { key: 'rr', label: 'R:R' },
   { key: 'confidence', label: 'Agreement' },
@@ -87,7 +88,7 @@ async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ScanR
 function mergeTop(boards: ScanResponse[]): ScanResponse {
   const ranked = boards
     .flatMap((b) => b.rows.map((r) => ({ ...r, timeframe: b.timeframe })))
-    .sort((a, b) => b.qualityRank - a.qualityRank);
+    .sort((a, b) => b.score - a.score);
   const bestBySymbol = new Map<string, ScanRow>();
   for (const row of ranked) {
     if (!bestBySymbol.has(row.symbol)) bestBySymbol.set(row.symbol, row);
@@ -123,7 +124,7 @@ function ScanView() {
   const [loading, setLoading] = useState(false);
   const [direction, setDirection] = useState<DirectionFilter>('all');
   const [minRR, setMinRR] = useState<number>(0);
-  const [sort, setSort] = useState<SortKey>('quality');
+  const [sort, setSort] = useState<SortKey>('score');
 
   const loadBoard = useCallback(async (v: View, force = false) => {
     setLoading(true);

@@ -43,8 +43,8 @@ const usd = (x: number) => `$${x.toFixed(2)}`;
 
 export default function ScanBoard({ board, showTimeframe = false }: ScanBoardProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  // Columns: #, [Candle], Symbol, Bias, Entry, Stop, Target, R:R, Agmt, Quality, Driver, caret.
-  const colSpan = 10 + (showTimeframe ? 1 : 0) + 1;
+  // Columns: #, [Candle], Symbol, Bias, Entry, Stop, Target, R:R, Agree, Score, Quality, Driver, caret.
+  const colSpan = 11 + (showTimeframe ? 1 : 0) + 1;
 
   return (
     <section data-testid="scan-board" className={styles.wrap} aria-label="top setups">
@@ -84,7 +84,15 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                 >
                   Agree
                 </th>
-                <th className={styles.num}>Quality</th>
+                <th
+                  className={styles.num}
+                  title="Setup Score 0–100 — a relative blend of illustrative EV, agreement, and R:R, minus risk flags. Not a win rate or predicted return."
+                >
+                  Score
+                </th>
+                <th className={styles.num} title="(Agreement ÷ 100) × R:R">
+                  Quality
+                </th>
                 <th className={styles.driverCol}>Driver</th>
                 <th aria-hidden="true" />
               </tr>
@@ -155,9 +163,8 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                       >
                         {row.confidence}
                       </td>
-                      <td className={`mono ${styles.num} ${styles.quality}`}>
-                        {row.qualityRank.toFixed(2)}
-                      </td>
+                      <td className={`mono ${styles.num} ${styles.quality}`}>{row.score}</td>
+                      <td className={`mono ${styles.num}`}>{row.qualityRank.toFixed(2)}</td>
                       <td className={styles.driverCol}>{row.driver}</td>
                       <td className={styles.caret} aria-hidden="true">
                         {isOpen ? '▾' : '▸'}

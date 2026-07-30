@@ -8,6 +8,8 @@ function row(symbol: string, direction: 'long' | 'short', confidence: number, rr
     direction,
     confidence,
     rr,
+    // stand-in score for filter/sort tests (the real formula is in setup-score.test)
+    score: (confidence / 100) * rr,
     qualityRank: (confidence / 100) * rr,
     confidenceBucket: confidence >= 70 ? 'high' : confidence >= 40 ? 'moderate' : 'low',
     price: 100,
@@ -31,7 +33,7 @@ const ROWS: ScanRow[] = [
 ];
 
 describe('applyView', () => {
-  it('defaults to no filter, sorted by quality desc', () => {
+  it('defaults to no filter, sorted by score desc', () => {
     const out = applyView(ROWS, DEFAULT_VIEW);
     expect(out.map((r) => r.symbol)).toEqual(['BBB', 'DDD', 'AAA', 'CCC']);
   });

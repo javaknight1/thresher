@@ -55,6 +55,8 @@ describe('runScan', () => {
       expect(['long', 'short']).toContain(row.direction);
       expect(row.rr).toBeGreaterThan(0);
       expect(row.qualityRank).toBeCloseTo((row.confidence / 100) * row.rr);
+      expect(row.score).toBeGreaterThanOrEqual(0);
+      expect(row.score).toBeLessThanOrEqual(100);
       expect(row.driver.length).toBeGreaterThan(0);
       expect(row.entry).toBeGreaterThan(0);
       expect(row.stop).toBeGreaterThan(0);
@@ -72,16 +74,14 @@ describe('runScan', () => {
     expect(board.rows.map((r) => r.symbol)).toContain('MOCKLONG');
   });
 
-  it('sorts rows by quality rank descending and caps at topN', async () => {
+  it('sorts rows by setup score descending and caps at topN', async () => {
     const provider = new MockProvider();
     const cache = new MemoryBarCache();
-    // Repeat MOCKLONG-like names to exceed topN would require distinct symbols;
-    // here we just assert ordering + the cap hold on the default universe.
     const board = await runScan({ timeframe: 'swing', provider, cache, now });
 
     expect(board.rows.length).toBeLessThanOrEqual(WEB_CONFIG.scan.topN);
     for (let i = 1; i < board.rows.length; i++) {
-      expect(board.rows[i - 1].qualityRank).toBeGreaterThanOrEqual(board.rows[i].qualityRank);
+      expect(board.rows[i - 1].score).toBeGreaterThanOrEqual(board.rows[i].score);
     }
   });
 });
