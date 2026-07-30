@@ -17,6 +17,7 @@ import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view'
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
 import AuthNav from './AuthNav';
+import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
 import styles from '../app/page.module.css';
 
@@ -165,6 +166,7 @@ function ScanView() {
 
   return (
     <div className={styles.shell}>
+      <OnboardingGate />
       <header className={styles.header}>
         <div>
           <Link href="/app" className={styles.wordmarkLink}>

@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import { GUIDE_SECTIONS, GLOSSARY } from '../../lib/guide-content';
 import Footer from '../../components/Footer';
+import GuideIntroButton from '../../components/GuideIntroButton';
 import styles from './guide.module.css';
 
 export const metadata = {
@@ -37,6 +38,7 @@ export default function GuidePage() {
           </Link>
           .
         </p>
+        <GuideIntroButton />
       </section>
 
       {GUIDE_SECTIONS.map((s, i) => (
