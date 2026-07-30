@@ -8,7 +8,7 @@ import styles from './Disclaimer.module.css';
 
 export function Disclaimer() {
   return (
-    <footer className={styles.root} data-testid="disclaimer">
+    <div className={styles.root} data-testid="disclaimer">
       <p className={styles.text}>
         Nothing here is financial advice. The engine reports the technical structure and the
         arithmetic of a defined-risk setup. The decision, and the risk, belong to the user.
@@ -21,7 +21,7 @@ export function Disclaimer() {
           What the engine cannot see
         </Link>
       </p>
-    </footer>
+    </div>
   );
 }
 

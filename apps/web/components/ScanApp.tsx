@@ -17,7 +17,7 @@ import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view'
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
 import AuthNav from './AuthNav';
-import Disclaimer from './Disclaimer';
+import Footer from './Footer';
 import styles from '../app/page.module.css';
 
 type View = 'top' | Timeframe;
@@ -178,9 +178,6 @@ function ScanView() {
           <Link href="/analyze" className={styles.searchBtn} data-testid="search-button">
             Search a ticker →
           </Link>
-          <Link href="/methodology" className="deep-link mono">
-            methodology
-          </Link>
           <AuthNav />
         </nav>
       </header>
@@ -287,7 +284,7 @@ function ScanView() {
         <ScanBoard board={displayed} showTimeframe={view === 'top'} />
       )}
 
-      <Disclaimer />
+      <Footer />
     </div>
   );
 }

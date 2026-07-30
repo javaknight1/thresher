@@ -77,7 +77,12 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                 <th className={styles.num}>Stop</th>
                 <th className={styles.num}>Target</th>
                 <th className={styles.num}>R:R</th>
-                <th className={styles.num}>Agmt</th>
+                <th
+                  className={styles.num}
+                  title="Signal agreement — how strongly trend, momentum, volume, and structure agree. Not a win rate."
+                >
+                  Agree
+                </th>
                 <th className={styles.num}>Quality</th>
                 <th className={styles.driverCol}>Driver</th>
                 <th aria-hidden="true" />

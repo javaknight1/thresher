@@ -1,0 +1,86 @@
+/**
+ * Guide content — the single source shared by the /guide page and the
+ * first-login onboarding wizard (the wizard shows these sections as cards; the
+ * guide page renders them plus a glossary and the honest-limits note).
+ */
+export interface GuideSection {
+  id: string;
+  title: string;
+  /** short lead paragraph */
+  lead: string;
+  /** supporting bullet points */
+  points: string[];
+  /** cover-gradient key for the wizard card ('a'..'d') */
+  cover: 'a' | 'b' | 'c' | 'd';
+}
+
+export const GUIDE_SECTIONS: readonly GuideSection[] = [
+  {
+    id: 'what',
+    title: 'What Thresher does',
+    lead: 'Give it a ticker and a candle size. It reads the chart the way a disciplined technician would and either lays out a complete trade — entry, stop, target — or refuses when the signals don’t line up.',
+    points: [
+      'It never forces a trade: a low-agreement setup returns an honest “no trade”, not a weak one.',
+      'Everything it shows is auditable — each number links to the methodology behind it.',
+    ],
+    cover: 'a',
+  },
+  {
+    id: 'board',
+    title: 'Reading the board',
+    lead: 'The Top tab ranks the best setups across Hourly, Daily, and Weekly candles. Each row is one setup that cleared every gate.',
+    points: [
+      'Bias — LONG (expecting up) or SHORT (expecting down).',
+      'Entry / Stop / Target — the trade levels. Stop is your risk; Target is the goal.',
+      'R:R — reward-to-risk. 2.00 means the target is twice as far as the stop.',
+      'Agree — how strongly the signals agree, 0–100. It is not a win rate.',
+      'Quality — the ranking score, (Agree ÷ 100) × R:R.',
+      'The counts (“42 refused”) show how few names qualify at once — that’s normal.',
+    ],
+    cover: 'b',
+  },
+  {
+    id: 'plan',
+    title: 'Reading a trade plan',
+    lead: 'Click any row (or search a ticker) for the full plan. Risk is measured in “R” — 1R is the distance from your entry to your stop.',
+    points: [
+      'Entry, Stop, and Target each show the reasoning (“basis”) for the level.',
+      'R:R ties it together: you risk 1R to make the reward, in R.',
+      'Agreement is the confidence read — signal agreement, still not a win rate.',
+      'Illustrative EV = (Agree ÷ 100) × R:R minus the rest — a quality check, not a promised return, until real outcomes are measured.',
+    ],
+    cover: 'c',
+  },
+  {
+    id: 'gates',
+    title: 'The five gates',
+    lead: 'Before proposing anything, Thresher runs five checks in order and stops at the first that fails — that’s why most names show “no trade”.',
+    points: [
+      'Edge — is there a clear direction at all?',
+      'Conviction — do the signals agree enough?',
+      'Structure — is the reward worth the risk?',
+      'Expected value — does the edge beat break-even?',
+      'Event risk — is an earnings report too close?',
+    ],
+    cover: 'd',
+  },
+];
+
+export interface GlossaryEntry {
+  term: string;
+  def: string;
+}
+
+export const GLOSSARY: readonly GlossaryEntry[] = [
+  { term: 'Bias', def: 'The trade direction — LONG (expecting the price to rise) or SHORT (to fall).' },
+  { term: 'Entry / Stop / Target', def: 'Where you’d get in, where you’d cut the loss, and where you’d take the gain.' },
+  { term: 'R (risk unit)', def: 'One R is the distance from entry to your stop — your defined risk on the trade.' },
+  { term: 'R:R (reward-to-risk)', def: 'How many R the target is away. 2.0 means the target is twice as far as the stop.' },
+  { term: 'Agreement / Confidence', def: 'How strongly trend, momentum, volume, and structure agree (0–100). Signal agreement — deliberately NOT a win rate until outcomes are calibrated.' },
+  { term: 'Quality', def: 'The board’s ranking score: (Agreement ÷ 100) × R:R. A relative sort key, not an expected return.' },
+  { term: 'Illustrative EV', def: 'Expected value in R using agreement as a stand-in probability. “Illustrative” because that probability isn’t yet verified against real results.' },
+  { term: 'Gate', def: 'One of five sequential checks (Edge, Conviction, Structure, Expected value, Event risk). All must pass for a trade to show.' },
+  { term: 'Refusal / No trade', def: 'A first-class result: the setup failed a gate, so Thresher declines rather than show a weak trade.' },
+  { term: 'Candle / timeframe', def: 'Hourly, Daily, or Weekly bars — the horizon the analysis runs on.' },
+  { term: '⚠ Outlier', def: 'A flag on an unusually large R:R (target far from entry) — worth a sanity-check before acting.' },
+];

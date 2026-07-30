@@ -6,7 +6,7 @@
  */
 import Link from 'next/link';
 import { authEnabled } from '../lib/auth';
-import Disclaimer from '../components/Disclaimer';
+import Footer from '../components/Footer';
 import styles from './landing.module.css';
 
 const VALUE_PROPS: ReadonlyArray<{ title: string; body: string }> = [
@@ -38,8 +38,8 @@ export default function Landing() {
       <header className={styles.nav}>
         <div className={styles.wordmark}>THRESHER</div>
         <nav className={styles.navLinks}>
-          <Link href="/methodology" className="deep-link mono">
-            methodology
+          <Link href="/guide" className="deep-link mono">
+            guide
           </Link>
           {authed && (
             <Link href={signInHref} className="deep-link mono" data-testid="landing-signin">
@@ -66,8 +66,8 @@ export default function Landing() {
           <Link href={startHref} className={styles.ctaLarge} data-testid="hero-cta">
             {authed ? 'Get started' : 'Open the board'} →
           </Link>
-          <Link href="/methodology" className={styles.ctaGhost}>
-            See the methodology
+          <Link href="/guide" className={styles.ctaGhost}>
+            See how it works
           </Link>
         </div>
       </section>
@@ -81,7 +81,7 @@ export default function Landing() {
         ))}
       </section>
 
-      <Disclaimer />
+      <Footer />
     </div>
   );
 }

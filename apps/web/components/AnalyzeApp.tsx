@@ -26,7 +26,7 @@ import FamilyGrid from './FamilyGrid';
 import CompanyPanel from './CompanyPanel';
 import TooNew from './TooNew';
 import AuthNav from './AuthNav';
-import Disclaimer from './Disclaimer';
+import Footer from './Footer';
 import styles from '../app/page.module.css';
 
 const PriceChart = dynamic(() => import('./PriceChart'), { ssr: false });
@@ -166,9 +166,6 @@ export default function AnalyzeApp() {
           <Link href="/app" className="deep-link mono">
             ← top setups
           </Link>
-          <Link href="/methodology" className="deep-link mono">
-            methodology
-          </Link>
           <AuthNav />
         </nav>
       </header>
@@ -228,7 +225,7 @@ export default function AnalyzeApp() {
         </div>
       )}
 
-      <Disclaimer />
+      <Footer />
     </div>
   );
 }

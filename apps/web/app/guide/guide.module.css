@@ -1,0 +1,163 @@
+.page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.openBtn,
+.openBtnLarge {
+  background: var(--amber);
+  color: var(--bg);
+  border-radius: 999px;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.openBtn {
+  padding: 7px 16px;
+  font-size: 12px;
+}
+
+.openBtnLarge {
+  align-self: flex-start;
+  padding: 10px 20px;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.openBtn:hover,
+.openBtnLarge:hover {
+  filter: brightness(1.08);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.15;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sub {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.section {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.sectionNum {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--amber);
+  padding-top: 2px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 19px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lead {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.points {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.glossary,
+.honest {
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.terms {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.termRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 620px) {
+  .termRow {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .section {
+    grid-template-columns: 1fr;
+  }
+  .sectionNum {
+    display: none;
+  }
+}
+
+.term {
+  font-weight: 600;
+  color: var(--amber);
+  font-size: 13.5px;
+}
+
+.def {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
