@@ -9,6 +9,7 @@ function row(symbol: string, direction: 'long' | 'short', confidence: number, rr
     confidence,
     rr,
     qualityRank: (confidence / 100) * rr,
+    confidenceBucket: confidence >= 70 ? 'high' : confidence >= 40 ? 'moderate' : 'low',
     price: 100,
     entry: 100,
     stop: direction === 'long' ? 95 : 105,

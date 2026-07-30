@@ -84,6 +84,8 @@ export interface ScanRow {
   direction: Exclude<AnalysisResult['direction'], 'none'>;
   /** confidence score ("signal agreement", not a win rate) */
   confidence: number;
+  /** confidence bucket — drives the Agree column color, matching the Analyze page */
+  confidenceBucket: AnalysisResult['confidence']['bucket'];
   /** reward:risk of the plan */
   rr: number;
   /** quality rank = (confidence/100) × rr — the sort key (design §6.3) */

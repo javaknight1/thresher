@@ -125,6 +125,17 @@
   font-weight: 600;
 }
 
+/* Agree color-coded by confidence bucket, matching the Analyze page. */
+.agree[data-bucket='high'] {
+  color: var(--long);
+}
+.agree[data-bucket='moderate'] {
+  color: var(--amber);
+}
+.agree[data-bucket='low'] {
+  color: var(--short);
+}
+
 .stop {
   color: var(--short);
 }

@@ -90,7 +90,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const board = await runScan({ timeframe, provider: getProvider(), cache: barCache });
+  let board;
+  try {
+    board = await runScan({ timeframe, provider: getProvider(), cache: barCache });
+  } catch (err) {
+    // Recompute failed — serve the last-good (cached) board rather than dropping
+    // this timeframe out of the aggregated Top view.
+    if (cached) {
+      return NextResponse.json(cached.value, { status: 200, headers: BASE_HEADERS });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    return errorResponse({ error: 'DATA_UNAVAILABLE', message: `scan failed: ${message}` });
+  }
   await boardStore.set(timeframe, board, ttlSeconds);
   return NextResponse.json(board, { status: 200, headers: BASE_HEADERS });
 }

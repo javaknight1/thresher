@@ -109,6 +109,7 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
       symbol: body.symbol,
       direction: body.direction,
       confidence,
+      confidenceBucket: body.confidence.bucket,
       rr,
       qualityRank: (confidence / 100) * rr,
       price: body.price,

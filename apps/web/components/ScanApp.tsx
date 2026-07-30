@@ -72,6 +72,18 @@ async function fetchBoard(tf: Timeframe, force: boolean): Promise<ScanResponse |
   }
 }
 
+/**
+ * Force a fresh board; if the recompute fails (a cold scan can 5xx/time out
+ * under a burst), fall back to the last cached (Upstash) board so the Top view
+ * always has all three timeframes. Otherwise a dropped timeframe changes the
+ * merge on every refresh — the "different results each reload" bug.
+ */
+async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ScanResponse | null> {
+  const fresh = await fetchBoard(tf, force);
+  if (fresh || !force) return fresh;
+  return fetchBoard(tf, false);
+}
+
 function mergeTop(boards: ScanResponse[]): ScanResponse {
   const ranked = boards
     .flatMap((b) => b.rows.map((r) => ({ ...r, timeframe: b.timeframe })))
@@ -118,9 +130,9 @@ function ScanView() {
     setError(null);
     try {
       if (v === 'top') {
-        const boards = (await Promise.all(TF_VIEWS.map((tf) => fetchBoard(tf, force)))).filter(
-          (b): b is ScanResponse => b !== null,
-        );
+        const boards = (
+          await Promise.all(TF_VIEWS.map((tf) => fetchBoardResilient(tf, force)))
+        ).filter((b): b is ScanResponse => b !== null);
         if (boards.length === 0) {
           setBoard(null);
           setError({ code: 'NETWORK', message: 'Could not reach the scan service.' });

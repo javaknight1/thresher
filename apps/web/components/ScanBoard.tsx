@@ -149,7 +149,12 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                         )}
                         {row.rr.toFixed(2)}
                       </td>
-                      <td className={`mono ${styles.num}`}>{row.confidence}</td>
+                      <td
+                        className={`mono ${styles.num} ${styles.agree}`}
+                        data-bucket={row.confidenceBucket}
+                      >
+                        {row.confidence}
+                      </td>
                       <td className={`mono ${styles.num} ${styles.quality}`}>
                         {row.qualityRank.toFixed(2)}
                       </td>
