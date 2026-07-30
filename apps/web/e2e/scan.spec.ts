@@ -25,7 +25,8 @@ test.describe('scan board', () => {
     await page.goto('/');
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
-    await page.getByTestId('scan-row-MOCKLONG').getByRole('link').click();
+    // Click the bias cell (not the symbol link) to prove the WHOLE row navigates.
+    await page.getByTestId('scan-bias-MOCKLONG').click();
     await expect(page).toHaveURL(/\/analyze\?symbol=MOCKLONG/);
 
     const badge = page.getByTestId('direction-badge');

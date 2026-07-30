@@ -10,6 +10,7 @@
  * an expected return.
  */
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ScanResponse } from '../lib/api-types';
 import styles from './ScanBoard.module.css';
 
@@ -17,11 +18,16 @@ export interface ScanBoardProps {
   board: ScanResponse;
 }
 
+function analyzeHref(symbol: string, timeframe: string): string {
+  return `/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`;
+}
+
 function asOfTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function ScanBoard({ board }: ScanBoardProps) {
+  const router = useRouter();
   return (
     <section data-testid="scan-board" className={styles.wrap} aria-label="top setups">
       <div className={styles.summary}>
@@ -55,13 +61,32 @@ export default function ScanBoard({ board }: ScanBoardProps) {
               </tr>
             </thead>
             <tbody>
-              {board.rows.map((row, i) => (
-                <tr key={row.symbol} data-testid={`scan-row-${row.symbol}`} className={styles.row}>
+              {board.rows.map((row, i) => {
+                const href = analyzeHref(row.symbol, board.timeframe);
+                return (
+                <tr
+                  key={row.symbol}
+                  data-testid={`scan-row-${row.symbol}`}
+                  className={styles.row}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`${row.symbol} ${row.direction} setup — open full trade detail`}
+                  onClick={() => router.push(href)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(href);
+                    }
+                  }}
+                >
                   <td className={styles.rank}>{i + 1}</td>
                   <td className={styles.symbolCell}>
+                    {/* Real link too: keyboard focus, middle-click / open-in-new-tab.
+                        stopPropagation so it doesn't double-fire the row nav. */}
                     <Link
-                      href={`/analyze?symbol=${encodeURIComponent(row.symbol)}&timeframe=${board.timeframe}`}
+                      href={href}
                       className={styles.symbolLink}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {row.symbol}
                     </Link>
@@ -81,7 +106,8 @@ export default function ScanBoard({ board }: ScanBoardProps) {
                   </td>
                   <td className={styles.driverCol}>{row.driver}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
