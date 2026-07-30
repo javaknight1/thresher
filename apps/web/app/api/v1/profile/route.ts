@@ -11,6 +11,7 @@ import { ERROR_STATUS } from '../../../../lib/api-types';
 import type { ApiError } from '../../../../lib/api-types';
 import { createProfileCache } from '../../../../lib/profile-cache';
 import { createRateLimiter } from '../../../../lib/ratelimit';
+import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runProfile } from '../../../../lib/profile-service';
 
@@ -51,11 +52,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // Separate rate-limit budget from analyze (the `profile:` prefix gives this
   // endpoint its own bucket, so loading both on one page view isn't double-spent).
-  const ip =
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'local';
-  const limit = await rateLimiter.check(`profile:${ip}`, false);
+  // Signed-in users are keyed by userId at the authed tier; anon by IP.
+  const { identity, authed } = await requestIdentity(req);
+  const limit = await rateLimiter.check(`profile:${identity}`, authed);
   if (!limit.allowed) {
     const retryAfterSeconds = Math.max(
       0,

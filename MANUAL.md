@@ -11,17 +11,22 @@ Status legend: ☐ todo · ☑ done (check items off as you complete them)
 
 ## Needed during M1 (blocking the API route going live)
 
-### ☐ Upstash (Redis cache + rate limiting)
-1. Create an account at https://upstash.com (free tier is fine for v1).
-2. Create a **Redis database** (choose a region near your Cloudflare deployment,
-   e.g. us-east-1; enable TLS — default).
-3. From the database page, copy the **REST API** credentials (not the TCP ones):
-   - `UPSTASH_REDIS_REST_URL`
-   - `UPSTASH_REDIS_REST_TOKEN`
-4. Paste both into `.env.local`.
+### ☑ Upstash (shared cache + rate limiting + scan board)
+Backs the OHLCV cache, the fundamentals cache, the rate limiter, AND the Scan
+board store. In production it's effectively **required**: without it each Worker
+isolate has its own in-memory copy, so the board recomputes constantly and the
+rate limit isn't actually enforced.
+1. Create an account at https://upstash.com (free tier is fine).
+2. Create a **Redis database** (region near your Cloudflare deployment; TLS on).
+3. Copy the **REST API** credentials (not the TCP ones): `UPSTASH_REDIS_REST_URL`,
+   `UPSTASH_REDIS_REST_TOKEN`.
+4. **Local:** paste both into `apps/web/.env.local`.
+5. **Production:** add both as **runtime** Variables/Secrets on the Worker
+   (Worker → Settings → Variables and Secrets) — **not** build vars. They're read
+   at request time; build-only placement is the same mistake that 500'd Clerk.
+   (URL as a var, TOKEN as an encrypted secret.)
 
-> Until these exist, the app runs with cache/rate-limit disabled (in-memory
-> fallback, dev only). The API route works locally without Upstash.
+> Without the keys the app still runs on in-memory fallbacks (fine for local/dev).
 
 ### ☐ Cloudflare (hosting — Workers via the OpenNext adapter)
 

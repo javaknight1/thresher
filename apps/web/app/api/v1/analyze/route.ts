@@ -12,6 +12,7 @@ import { ERROR_STATUS } from '../../../../lib/api-types';
 import type { ApiError } from '../../../../lib/api-types';
 import { createBarCache } from '../../../../lib/cache';
 import { createRateLimiter } from '../../../../lib/ratelimit';
+import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runAnalysis } from '../../../../lib/analyze-service';
 
@@ -72,12 +73,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const timeframe: Timeframe = rawTimeframe;
 
   // --- rate limit BEFORE any provider work (design §2.1) ---
-  const identity =
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'local';
-  // Clerk lands in M2 — until then every caller is anonymous (20/hr tier).
-  const authed = false;
+  // Signed-in users are limited by userId at the authed tier; anon by IP.
+  const { identity, authed } = await requestIdentity(req);
   const limit = await rateLimiter.check(identity, authed);
   if (!limit.allowed) {
     const retryAfterSeconds = Math.max(

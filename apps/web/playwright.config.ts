@@ -33,6 +33,15 @@ export default defineConfig({
     port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { THRESHER_PROVIDER: 'mock' },
+    // MockProvider + keyless (auth off, in-memory cache/limits) so e2e is
+    // deterministic and matches CI even when a dev's .env.local has real keys.
+    // Next does not overwrite env vars already set here, so empty wins.
+    env: {
+      THRESHER_PROVIDER: 'mock',
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '',
+      CLERK_SECRET_KEY: '',
+      UPSTASH_REDIS_REST_URL: '',
+      UPSTASH_REDIS_REST_TOKEN: '',
+    },
   },
 });

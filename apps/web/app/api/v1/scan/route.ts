@@ -13,9 +13,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { Timeframe } from '@thresher/engine';
 import { ERROR_STATUS } from '../../../../lib/api-types';
-import type { ApiError, ScanResponse } from '../../../../lib/api-types';
+import type { ApiError } from '../../../../lib/api-types';
 import { createBarCache } from '../../../../lib/cache';
 import { createRateLimiter } from '../../../../lib/ratelimit';
+import { createScanStore } from '../../../../lib/scan-store';
+import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runScan } from '../../../../lib/scan-service';
 import { WEB_CONFIG } from '../../../../lib/config';
@@ -25,13 +27,13 @@ export const runtime = 'nodejs';
 
 const barCache = createBarCache();
 const rateLimiter = createRateLimiter();
+// Shared board store (Upstash when configured) so every isolate sees the same
+// computed board and it survives deploys — otherwise each isolate recomputes.
+const boardStore = createScanStore();
 
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 const MS_PER_SECOND = 1_000;
 const BASE_HEADERS = { 'cache-control': 'no-store' } as const;
-
-/** Per-isolate board cache: last computed ScanResponse per timeframe. */
-const boardCache = new Map<Timeframe, { value: ScanResponse; storedAt: number }>();
 
 function isTimeframe(value: string): value is Timeframe {
   return (TIMEFRAMES as readonly string[]).includes(value);
@@ -60,17 +62,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // spend), UNLESS the caller forced a refresh (still rate-limited below).
   const force = params.get('refresh') === '1';
   const ttlSeconds = WEB_CONFIG.cache.ttlSeconds[timeframe];
-  const cached = boardCache.get(timeframe);
+  const cached = await boardStore.get(timeframe);
   if (!force && cached && (Date.now() - cached.storedAt) / MS_PER_SECOND <= ttlSeconds) {
     return NextResponse.json(cached.value, { status: 200, headers: BASE_HEADERS });
   }
 
   // 2. Recompute path is rate-limited (protects the data source, design §2.1).
-  const identity =
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'local';
-  const limit = await rateLimiter.check(`scan:${identity}`, false);
+  // Signed-in users are limited by userId at the authed tier; anon by IP.
+  const { identity, authed } = await requestIdentity(req);
+  const limit = await rateLimiter.check(`scan:${identity}`, authed);
   if (!limit.allowed) {
     // Stale board beats a hard failure: serve the last one if we have it.
     if (cached) {
@@ -91,6 +91,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const board = await runScan({ timeframe, provider: getProvider(), cache: barCache });
-  boardCache.set(timeframe, { value: board, storedAt: Date.now() });
+  await boardStore.set(timeframe, board, ttlSeconds);
   return NextResponse.json(board, { status: 200, headers: BASE_HEADERS });
 }
