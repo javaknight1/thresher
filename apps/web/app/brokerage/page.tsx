@@ -5,7 +5,7 @@
  */
 import { BROKERAGES, BROKERAGE_DISCLOSURE } from '../../lib/brokerages';
 import SiteHeader from '../../components/SiteHeader';
-import Monogram from '../../components/Monogram';
+import Logo from '../../components/Logo';
 import Footer from '../../components/Footer';
 import styles from './brokerage.module.css';
 
@@ -34,7 +34,7 @@ export default function BrokeragePage() {
         {BROKERAGES.map((b) => (
           <div key={b.name} className={styles.card} data-testid={`brokerage-${b.name}`}>
             <div className={styles.cardHead}>
-              <Monogram label={b.name} size={38} />
+              <Logo domain={b.domain} label={b.name} size={38} />
               <div>
                 <div className={styles.cardTag}>{b.tag}</div>
                 <h2 className={styles.cardName}>{b.name}</h2>

@@ -8,6 +8,7 @@
  * phrasing anywhere.
  */
 import type { ProfileResponse } from '../lib/api-types';
+import Logo from './Logo';
 import styles from './CompanyPanel.module.css';
 
 const DASH = '—';
@@ -84,12 +85,15 @@ export default function CompanyPanel({
       aria-label="company context"
     >
       <header className={styles.head}>
-        <div>
-          <div className={styles.kicker}>
-            COMPANY CONTEXT{stale && <span className={styles.stale}>STALE</span>}
+        <div className={styles.identity}>
+          <Logo ticker={profile.symbol} label={profile.symbol} size={40} />
+          <div>
+            <div className={styles.kicker}>
+              COMPANY CONTEXT{stale && <span className={styles.stale}>STALE</span>}
+            </div>
+            <h2 className={styles.name}>{profile.name ?? profile.symbol}</h2>
+            {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
           </div>
-          <h2 className={styles.name}>{profile.name ?? profile.symbol}</h2>
-          {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
         </div>
         {profile.website && (
           <a

@@ -19,6 +19,16 @@ export default function Footer() {
         <Link href="/methodology" className="deep-link mono" data-testid="footer-methodology">
           methodology
         </Link>
+        {process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN && (
+          <a
+            href="https://logo.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.attribution}
+          >
+            Logos by Logo.dev
+          </a>
+        )}
       </nav>
       <Disclaimer />
     </footer>

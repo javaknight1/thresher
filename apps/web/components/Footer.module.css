@@ -11,4 +11,15 @@
   display: flex;
   gap: 18px;
   font-size: 12px;
+  align-items: center;
+}
+
+.attribution {
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.attribution:hover {
+  color: var(--text);
 }

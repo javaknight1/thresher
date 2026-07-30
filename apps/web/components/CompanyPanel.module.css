@@ -17,6 +17,12 @@
   flex-wrap: wrap;
 }
 
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .kicker {
   font-family: var(--font-mono);
   font-size: 11px;

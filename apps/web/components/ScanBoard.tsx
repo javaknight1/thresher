@@ -16,7 +16,7 @@ import Link from 'next/link';
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
-import Monogram from './Monogram';
+import Logo from './Logo';
 import styles from './ScanBoard.module.css';
 
 export interface ScanBoardProps {
@@ -116,7 +116,7 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                       {showTimeframe && <td className={`mono ${styles.tfCell}`}>{TF_LABEL[tf]}</td>}
                       <td className={styles.symbolCell}>
                         <div className={styles.symbolWrap}>
-                          <Monogram label={row.symbol} size={22} />
+                          <Logo ticker={row.symbol} label={row.symbol} size={22} />
                           <Link
                             href={href}
                             className={styles.symbolLink}

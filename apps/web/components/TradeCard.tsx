@@ -9,6 +9,7 @@ import type { AnalyzeResponse } from '../lib/api-types';
 import StatTile from './StatTile';
 import ConfidenceBar from './ConfidenceBar';
 import NoTrade from './NoTrade';
+import Logo from './Logo';
 import styles from './TradeCard.module.css';
 
 const DIRECTION_LABEL = { long: 'LONG', short: 'SHORT', none: 'NO TRADE' } as const;
@@ -23,6 +24,7 @@ export default function TradeCard({ data }: { data: AnalyzeResponse }) {
   return (
     <section className={`panel ${styles.card}`} aria-label="trade card">
       <header className={styles.head}>
+        <Logo ticker={data.symbol} label={data.symbol} size={28} />
         <span className={styles.ticker}>{data.symbol}</span>
         <span className={`mono ${styles.price}`}>{fmtUsd(data.price)}</span>
         <span

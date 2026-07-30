@@ -42,6 +42,7 @@ export default defineConfig({
       CLERK_SECRET_KEY: '',
       UPSTASH_REDIS_REST_URL: '',
       UPSTASH_REDIS_REST_TOKEN: '',
+      NEXT_PUBLIC_LOGO_DEV_TOKEN: '',
     },
   },
 });
