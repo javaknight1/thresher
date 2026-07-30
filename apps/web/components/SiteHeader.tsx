@@ -38,6 +38,8 @@ export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
             </button>
           )}
           <Link href="/app" className={styles.wordmark}>
+            {/* brand mark (same as the favicon) */}
+            <img src="/icon.svg" alt="" className={styles.mark} width={20} height={20} />
             THRESHER
           </Link>
         </div>
