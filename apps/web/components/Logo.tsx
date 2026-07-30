@@ -38,7 +38,7 @@ export default function Logo({ ticker, domain, label, size = 24 }: LogoProps) {
   return (
     <span
       className={styles.tile}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.28) }}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.22) }}
     >
       {/* plain img: no next/image remote config, works on workerd */}
       <img

@@ -9,7 +9,10 @@
 }
 
 .img {
-  width: 86%;
-  height: 86%;
+  /* Fill the chip edge-to-edge (object-fit keeps aspect) so we don't add our
+     own padding on top of the logo's — a logo's intrinsic padding is all that
+     remains. Wide wordmark logos still letterbox top/bottom by nature. */
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
