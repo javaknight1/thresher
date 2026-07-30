@@ -103,7 +103,8 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
     }
     emitted++;
     const confidence = body.confidence.score;
-    const rr = body.plan.rr;
+    const plan = body.plan;
+    const rr = plan.rr;
     rows.push({
       symbol: body.symbol,
       direction: body.direction,
@@ -111,6 +112,9 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
       rr,
       qualityRank: (confidence / 100) * rr,
       price: body.price,
+      entry: plan.entry,
+      stop: plan.stop,
+      target: plan.target,
       driver: firstSentence(body.story),
     });
   }

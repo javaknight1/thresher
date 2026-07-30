@@ -34,6 +34,20 @@ test.describe('scan board', () => {
     await expect(badge).toContainText(/long/i);
   });
 
+  test('Top is the default view and aggregates candle sizes; tabs switch', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('scan-tab-top')).toHaveAttribute('aria-pressed', 'true');
+
+    const board = page.getByTestId('scan-board');
+    await expect(board).toBeVisible({ timeout: 30_000 });
+    // MOCKLONG (a Daily setup) surfaces on the aggregated Top board.
+    await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible();
+
+    // Switching to the Daily tab still shows it.
+    await page.getByTestId('scan-tab-swing').click();
+    await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
+  });
+
   test('the Search button navigates to the Analyze view', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('search-button').click();

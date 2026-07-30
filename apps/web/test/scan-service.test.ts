@@ -50,12 +50,23 @@ describe('runScan', () => {
     expect(board.skipped).toBe(2);
     expect(board.emitted + board.refused + board.skipped).toBe(universe.length);
 
-    // Every row is a real, gate-passing setup.
+    // Every row is a real, gate-passing setup with actionable trade levels.
     for (const row of board.rows) {
       expect(['long', 'short']).toContain(row.direction);
       expect(row.rr).toBeGreaterThan(0);
       expect(row.qualityRank).toBeCloseTo((row.confidence / 100) * row.rr);
       expect(row.driver.length).toBeGreaterThan(0);
+      expect(row.entry).toBeGreaterThan(0);
+      expect(row.stop).toBeGreaterThan(0);
+      expect(row.target).toBeGreaterThan(0);
+      // long: stop < entry < target; short mirrors.
+      if (row.direction === 'long') {
+        expect(row.stop).toBeLessThan(row.entry);
+        expect(row.target).toBeGreaterThan(row.entry);
+      } else {
+        expect(row.stop).toBeGreaterThan(row.entry);
+        expect(row.target).toBeLessThan(row.entry);
+      }
     }
     // MOCKLONG (a clean uptrend) is on the board.
     expect(board.rows.map((r) => r.symbol)).toContain('MOCKLONG');

@@ -89,8 +89,18 @@ export interface ScanRow {
   /** quality rank = (confidence/100) × rr — the sort key (design §6.3) */
   qualityRank: number;
   price: number;
+  /** the actual trade levels, so the board is directly actionable */
+  entry: number;
+  stop: number;
+  target: number;
   /** one-line driver (first sentence of the engine story) */
   driver: string;
+  /**
+   * Which candle size produced this setup. The per-timeframe board leaves this
+   * unset (the board carries the timeframe); the aggregated "Top" view sets it
+   * per row so each row shows its badge and deep-links to its own timeframe.
+   */
+  timeframe?: Timeframe;
 }
 
 /**

@@ -119,6 +119,20 @@
   font-weight: 600;
 }
 
+.stop {
+  color: var(--short);
+}
+
+.target {
+  color: var(--long);
+}
+
+.tfCell {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .driverCol {
   color: var(--muted);
   font-size: 12px;
