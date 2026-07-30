@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
+import { authEnabled } from '../lib/auth';
 import './globals.css';
 
 const display = Space_Grotesk({
@@ -22,9 +24,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return (
+  const tree = (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );
+  // ClerkProvider only when keys are configured; otherwise the app renders open.
+  return authEnabled() ? <ClerkProvider>{tree}</ClerkProvider> : tree;
 }

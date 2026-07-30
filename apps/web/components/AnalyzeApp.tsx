@@ -25,6 +25,7 @@ import TradeStory from './TradeStory';
 import FamilyGrid from './FamilyGrid';
 import CompanyPanel from './CompanyPanel';
 import TooNew from './TooNew';
+import AuthNav from './AuthNav';
 import Disclaimer from './Disclaimer';
 import styles from '../app/page.module.css';
 
@@ -154,7 +155,7 @@ export default function AnalyzeApp() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <div>
-          <Link href="/" className={styles.wordmarkLink}>
+          <Link href="/app" className={styles.wordmarkLink}>
             <div className={styles.wordmark}>THRESHER</div>
           </Link>
           <div className={styles.tagline}>
@@ -162,12 +163,13 @@ export default function AnalyzeApp() {
           </div>
         </div>
         <nav className={styles.nav}>
-          <Link href="/" className="deep-link mono">
+          <Link href="/app" className="deep-link mono">
             ← top setups
           </Link>
           <Link href="/methodology" className="deep-link mono">
             methodology
           </Link>
+          <AuthNav />
         </nav>
       </header>
 

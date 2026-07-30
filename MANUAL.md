@@ -67,9 +67,42 @@ When/if needed later:
 
 ---
 
+## M2 — Clerk (authentication)
+
+The code is wired and **conditional on the keys**: present → auth is enforced;
+absent → the app runs open (so local CI / e2e are unaffected). Landing page is at
+`/`, the app (Scan board) is at `/app`, and signed-in users are redirected `/` → `/app`.
+
+### ☐ Local (Clerk **Development** instance)
+1. Clerk dashboard → **Development** instance → **API Keys** → copy `pk_test_…` and `sk_test_…`.
+2. Put them in `apps/web/.env.local` (see `.env.example` for the full block):
+   ```
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_…
+   CLERK_SECRET_KEY=sk_test_…
+   NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+   NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+   NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/app
+   NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/app
+   ```
+3. `pnpm --filter @thresher/web dev` → visit `/` → Get started → sign up a test user → land on `/app`.
+
+### ☐ Production (Clerk **Production** instance, on Cloudflare)
+1. Clerk dashboard → **Production** instance → **Domains** → set app domain
+   `thresher.sharkfins.xyz`. Add the ~5 **DNS records** it shows (CNAMEs `clerk`,
+   `accounts`, `clkmail`, two `clk._domainkey`) in **Cloudflare DNS** → wait "Verified".
+2. **API Keys** → copy `pk_live_…` and `sk_live_…`.
+3. In the **Cloudflare Workers build settings**:
+   - Build-time variables (baked into the client bundle): `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+     = `pk_live_…`, plus the four `NEXT_PUBLIC_CLERK_*` URL vars above.
+   - Encrypted runtime secret: `CLERK_SECRET_KEY` = `sk_live_…`.
+4. Push to `master` (triggers the build) → verify on `thresher.sharkfins.xyz`:
+   logged-out shows the landing, sign-in works, signed-in lands on `/app`.
+
+> Per-user rate limits (userId instead of IP) land with Upstash — the shared
+> store is what makes them enforceable.
+
 ## Needed at M2 (do not set up yet — listed for planning)
 
-### ☐ Clerk (auth) — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
 ### ☐ Supabase (Postgres) — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 
 ---

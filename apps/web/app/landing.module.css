@@ -1,0 +1,146 @@
+.page {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 4px;
+  color: var(--amber);
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.cta,
+.ctaLarge {
+  background: var(--amber);
+  color: var(--bg);
+  border-radius: 999px;
+  text-decoration: none;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.cta {
+  padding: 7px 16px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.cta:hover,
+.ctaLarge:hover {
+  filter: brightness(1.08);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 0 8px;
+  max-width: 760px;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.headline {
+  margin: 0;
+  font-family: var(--font-display, var(--font-mono));
+  font-size: 40px;
+  line-height: 1.1;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sub {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.heroCtas {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.ctaLarge {
+  padding: 11px 22px;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.ctaGhost {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.ctaGhost:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .headline {
+    font-size: 30px;
+  }
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cardTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.cardBody {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
