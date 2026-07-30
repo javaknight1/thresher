@@ -92,6 +92,83 @@
   margin-top: -4px;
 }
 
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.filterPill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.filterPillActive {
+  background: var(--panel2, var(--panel));
+  color: var(--text);
+  border-color: var(--amber);
+}
+
+.filterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.select {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.refreshBtn {
+  margin-left: auto;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--amber);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.marketNote {
+  font-size: 12px;
+  color: var(--amber);
+}
+
 .error {
   background: var(--panel);
   border: 1px solid var(--short);

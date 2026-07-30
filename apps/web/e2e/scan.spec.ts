@@ -48,6 +48,18 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
   });
 
+  test('the direction filter narrows the board', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
+
+    // MOCKLONG is a long setup, so filtering to Shorts hides it.
+    await page.getByTestId('filter-short').click();
+    await expect(page.getByTestId('scan-row-MOCKLONG')).toHaveCount(0);
+
+    await page.getByTestId('filter-all').click();
+    await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible();
+  });
+
   test('the Search button navigates to the Analyze view', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('search-button').click();

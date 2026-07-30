@@ -60,5 +60,8 @@ export const WEB_CONFIG = {
     topN: 10,
     /** concurrent analyses in flight during a scan (throttle Yahoo) */
     concurrency: 5,
+    /** R:R at/above which a row is flagged as an outlier to sanity-check
+     *  (display-only — does NOT change the (C/100)×RR ranking) */
+    outlierRR: 6,
   },
 } as const;

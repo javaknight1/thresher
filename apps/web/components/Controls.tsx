@@ -4,7 +4,7 @@
  * Controls — ticker input, timeframe pills, sample chips, and the
  * data-freshness stamp (design §6.2 item 1; §2.1 visible staleness warning).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Timeframe } from '@thresher/engine';
 import { WEB_CONFIG } from '../lib/config';
 import styles from './Controls.module.css';
@@ -47,6 +47,12 @@ export default function Controls({
   freshness,
 }: ControlsProps) {
   const [input, setInput] = useState('');
+
+  // Reflect the active symbol into the box (e.g. arriving via a Scan-row deep
+  // link, or after a sample chip), so the field isn't empty for the shown plan.
+  useEffect(() => {
+    if (activeSymbol) setInput(activeSymbol);
+  }, [activeSymbol]);
 
   const submit = (symbol?: string) => {
     const clean = sanitize((symbol ?? input).trim());

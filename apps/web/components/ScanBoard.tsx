@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse } from '../lib/api-types';
+import { WEB_CONFIG } from '../lib/config';
 import styles from './ScanBoard.module.css';
 
 export interface ScanBoardProps {
@@ -123,7 +124,18 @@ export default function ScanBoard({ board, showTimeframe = false }: ScanBoardPro
                     <td className={`mono ${styles.num}`}>{usd(row.entry)}</td>
                     <td className={`mono ${styles.num} ${styles.stop}`}>{usd(row.stop)}</td>
                     <td className={`mono ${styles.num} ${styles.target}`}>{usd(row.target)}</td>
-                    <td className={`mono ${styles.num}`}>{row.rr.toFixed(2)}</td>
+                    <td className={`mono ${styles.num}`}>
+                      {row.rr >= WEB_CONFIG.scan.outlierRR && (
+                        <span
+                          className={styles.outlier}
+                          title="Unusually large reward:risk — the target is far from entry. Sanity-check before acting."
+                          data-testid={`scan-outlier-${row.symbol}`}
+                        >
+                          ⚠{' '}
+                        </span>
+                      )}
+                      {row.rr.toFixed(2)}
+                    </td>
                     <td className={`mono ${styles.num}`}>{row.confidence}</td>
                     <td className={`mono ${styles.num} ${styles.quality}`}>
                       {row.qualityRank.toFixed(2)}

@@ -56,10 +56,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const timeframe: Timeframe = rawTimeframe;
 
-  // 1. Fresh cached board → serve immediately (no provider work, no limit spend).
+  // 1. Fresh cached board → serve immediately (no provider work, no limit
+  // spend), UNLESS the caller forced a refresh (still rate-limited below).
+  const force = params.get('refresh') === '1';
   const ttlSeconds = WEB_CONFIG.cache.ttlSeconds[timeframe];
   const cached = boardCache.get(timeframe);
-  if (cached && (Date.now() - cached.storedAt) / MS_PER_SECOND <= ttlSeconds) {
+  if (!force && cached && (Date.now() - cached.storedAt) / MS_PER_SECOND <= ttlSeconds) {
     return NextResponse.json(cached.value, { status: 200, headers: BASE_HEADERS });
   }
 
