@@ -74,6 +74,45 @@ export interface ProfileResponse {
   stale: boolean;
 }
 
+/**
+ * One row of the Scan board (design §6.3) — a single gate-passing setup. Only
+ * emitted trades appear; refusals are summarized in the counts, not listed.
+ */
+export interface ScanRow {
+  symbol: string;
+  /** long | short — never 'none' (a passing setup has a direction) */
+  direction: Exclude<AnalysisResult['direction'], 'none'>;
+  /** confidence score ("signal agreement", not a win rate) */
+  confidence: number;
+  /** reward:risk of the plan */
+  rr: number;
+  /** quality rank = (confidence/100) × rr — the sort key (design §6.3) */
+  qualityRank: number;
+  price: number;
+  /** one-line driver (first sentence of the engine story) */
+  driver: string;
+}
+
+/**
+ * GET /api/v1/scan response — the ranked board for one timeframe plus the
+ * refusal-collapse counts so the board stays honest about how few setups pass.
+ */
+export interface ScanResponse {
+  timeframe: Timeframe;
+  /** when the scan ran (ISO) */
+  asOf: string;
+  /** symbols actually analyzed */
+  universeSize: number;
+  /** count with a qualifying (gate-passing) setup */
+  emitted: number;
+  /** count refused (no qualifying setup) */
+  refused: number;
+  /** count skipped: too new, unknown, or data unavailable */
+  skipped: number;
+  /** top-N rows, sorted by qualityRank descending */
+  rows: ScanRow[];
+}
+
 export type ApiErrorCode =
   | 'INVALID_REQUEST'
   | 'UNKNOWN_SYMBOL'

@@ -40,6 +40,10 @@ class FakeProvider implements MarketDataProvider {
   async getProfile(): Promise<CompanyProfile> {
     throw new Error('getProfile not used in cache tests');
   }
+
+  async getMovers(): Promise<string[]> {
+    return [];
+  }
 }
 
 const now = () => NOW;

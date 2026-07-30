@@ -31,6 +31,14 @@ export interface MarketDataProvider {
    * individual missing fields are returned as null, never thrown.
    */
   getProfile(symbol: string): Promise<CompanyProfile>;
+  /**
+   * Candidate symbols for the Scan board — today's movers from the provider's
+   * predefined screens (most active / gainers / losers). Best-effort: returns
+   * whatever it can (possibly empty) and never throws; the scan falls back to
+   * the curated universe alone. These are only CANDIDATES — every symbol still
+   * goes through the full pure engine before it can appear on the board.
+   */
+  getMovers(): Promise<string[]>;
 }
 
 /** One past quarter's earnings: reported vs. expected (Yahoo earningsHistory). */

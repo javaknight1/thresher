@@ -36,4 +36,29 @@ export const WEB_CONFIG = {
   /** company-context panel (display-only fundamentals — never feeds the engine) */
   profile: { maxPeers: 6, maxEarningsQuarters: 4 },
   samples: ['NVDA', 'AAPL', 'TSLA', 'XOM', 'JPM', 'COIN'],
+  /**
+   * Scan / "top setups" (design §6.3). The engine ranks a bounded candidate
+   * universe = a curated liquid base UNION today's Yahoo movers, deduped and
+   * capped. MVP is on-demand + cached; `maxUniverse` is kept small to stay
+   * under Cloudflare's per-invocation subrequest budget. Ranking is the doc's
+   * quality rank (C/100)×RR among gate-passing setups. Bumping the universe or
+   * scanning all timeframes at once is the graduation to scheduled precompute.
+   */
+  scan: {
+    /** curated liquid base — always screened, listed first */
+    curated: [
+      'NVDA', 'AAPL', 'MSFT', 'AMZN', 'META', 'GOOGL',
+      'TSLA', 'AMD', 'JPM', 'XOM', 'COIN', 'NFLX',
+    ],
+    /** Yahoo predefined screens merged in for "at this moment" relevance */
+    moverScreens: ['most_actives', 'day_gainers', 'day_losers'],
+    /** symbols pulled per screen before dedup/cap */
+    moversPerScreen: 15,
+    /** hard cap on symbols actually analyzed per scan (subrequest budget) */
+    maxUniverse: 20,
+    /** rows shown on the board */
+    topN: 10,
+    /** concurrent analyses in flight during a scan (throttle Yahoo) */
+    concurrency: 5,
+  },
 } as const;

@@ -265,4 +265,13 @@ export class MockProvider implements MarketDataProvider {
     }
     return generateProfile(sym);
   }
+
+  /**
+   * Deterministic candidate list for the Scan board: a mix that exercises every
+   * outcome — MOCKLONG emits, MOCKCHOP refuses, MOCKNEW is too new (skipped),
+   * MOCKUNKNOWN errors (skipped), plus generic tape that refuses.
+   */
+  async getMovers(): Promise<string[]> {
+    return ['MOCKLONG', 'MOCKCHOP', 'MOCKNEW', 'MOCKUNKNOWN', 'GENONE', 'GENTWO'];
+  }
 }

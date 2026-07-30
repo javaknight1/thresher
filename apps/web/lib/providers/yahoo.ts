@@ -132,6 +132,31 @@ export class YahooProvider implements MarketDataProvider {
    * swallowed on failure, so a flaky recommendations endpoint never blanks the
    * panel.
    */
+  /**
+   * Candidate symbols for the Scan board from Yahoo's predefined screens
+   * (WEB_CONFIG.scan.moverScreens). Best-effort: each screen is tried
+   * independently and a failure contributes nothing, so a flaky screener never
+   * breaks the scan (it falls back to the curated universe).
+   */
+  async getMovers(): Promise<string[]> {
+    const symbols = new Set<string>();
+    for (const scrIds of WEB_CONFIG.scan.moverScreens) {
+      try {
+        const res = await this.yf.screener({
+          scrIds,
+          count: WEB_CONFIG.scan.moversPerScreen,
+        });
+        for (const q of res.quotes ?? []) {
+          const sym = str(q.symbol);
+          if (sym) symbols.add(sym.toUpperCase());
+        }
+      } catch {
+        // best-effort: skip this screen
+      }
+    }
+    return [...symbols];
+  }
+
   async getProfile(symbol: string): Promise<CompanyProfile> {
     let summary: QuoteSummaryResult;
     try {

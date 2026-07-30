@@ -232,6 +232,9 @@ describe('runAnalysis — caching', () => {
     getProfile(symbol: string): Promise<CompanyProfile> {
       return this.inner.getProfile(symbol);
     }
+    getMovers(): Promise<string[]> {
+      return this.inner.getMovers();
+    }
   }
 
   it('second analysis with the same cache serves bars without a provider call', async () => {
