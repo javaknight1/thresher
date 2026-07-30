@@ -30,6 +30,60 @@
 
 .nav {
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wordmarkLink {
+  text-decoration: none;
+}
+
+.searchBtn {
+  background: var(--amber);
+  color: var(--bg);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.searchBtn:hover {
+  filter: brightness(1.08);
+}
+
+.scanTabs {
+  display: flex;
+  gap: 6px;
+}
+
+.scanTab {
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.scanTabActive {
+  background: var(--amber);
+  color: var(--bg);
+  border-color: var(--amber);
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
 }
 
 .error {

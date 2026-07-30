@@ -14,7 +14,7 @@ const STAT_TILES = ['stat-entry', 'stat-stop', 'stat-target', 'stat-ev'] as cons
 
 /** Fill the ticker, select the swing timeframe, and submit. */
 async function analyze(page: Page, symbol: string): Promise<void> {
-  await page.goto('/');
+  await page.goto('/analyze');
   await page.getByTestId('ticker-input').fill(symbol);
   await page.getByTestId('tf-swing').click();
   await page.getByTestId('analyze-button').click();
