@@ -76,6 +76,12 @@
   gap: 8px;
 }
 
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .cardTag {
   font-family: var(--font-mono);
   font-size: 10.5px;

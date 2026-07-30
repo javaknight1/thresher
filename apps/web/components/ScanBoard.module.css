@@ -91,6 +91,12 @@
   font-weight: 600;
 }
 
+.symbolWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .symbolLink {
   color: var(--amber);
   text-decoration: none;
