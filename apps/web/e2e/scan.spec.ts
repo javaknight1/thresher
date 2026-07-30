@@ -80,9 +80,9 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('scan-tab-swing')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('the Search button navigates to the Analyze view', async ({ page }) => {
+  test('the header Search link navigates to the Analyze view', async ({ page }) => {
     await page.goto('/app');
-    await page.getByTestId('search-button').click();
+    await page.getByTestId('nav-search').click();
     await expect(page).toHaveURL(/\/analyze/);
     await expect(page.getByTestId('ticker-input')).toBeVisible();
   });

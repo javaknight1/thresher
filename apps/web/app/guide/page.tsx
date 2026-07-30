@@ -6,6 +6,7 @@
  */
 import Link from 'next/link';
 import { GUIDE_SECTIONS, GLOSSARY } from '../../lib/guide-content';
+import SiteHeader from '../../components/SiteHeader';
 import Footer from '../../components/Footer';
 import GuideIntroButton from '../../components/GuideIntroButton';
 import styles from './guide.module.css';
@@ -18,14 +19,7 @@ export const metadata = {
 export default function GuidePage() {
   return (
     <div className={styles.page} data-testid="guide-page">
-      <header className={styles.header}>
-        <Link href="/" className={styles.wordmark}>
-          THRESHER
-        </Link>
-        <Link href="/app" className={styles.openBtn}>
-          Open the board →
-        </Link>
-      </header>
+      <SiteHeader showBack />
 
       <section className={styles.intro}>
         <div className={styles.kicker}>the guide</div>

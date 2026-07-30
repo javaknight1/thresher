@@ -7,7 +7,12 @@
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-const isProtected = createRouteMatcher(['/app(.*)', '/analyze(.*)', '/api/v1/(.*)']);
+const isProtected = createRouteMatcher([
+  '/app(.*)',
+  '/analyze(.*)',
+  '/dashboard(.*)',
+  '/api/v1/(.*)',
+]);
 
 const withClerk = clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();

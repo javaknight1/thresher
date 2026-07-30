@@ -8,7 +8,6 @@
  * table client-side; the scan-level counts are unchanged.
  */
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type { ApiError, ScanResponse, ScanRow } from '../lib/api-types';
@@ -16,7 +15,7 @@ import { WEB_CONFIG } from '../lib/config';
 import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view';
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
-import AuthNav from './AuthNav';
+import SiteHeader from './SiteHeader';
 import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
 import styles from '../app/page.module.css';
@@ -167,22 +166,7 @@ function ScanView() {
   return (
     <div className={styles.shell}>
       <OnboardingGate />
-      <header className={styles.header}>
-        <div>
-          <Link href="/app" className={styles.wordmarkLink}>
-            <div className={styles.wordmark}>THRESHER</div>
-          </Link>
-          <div className={styles.tagline}>
-            technical confluence desk — the setups clearing every gate right now
-          </div>
-        </div>
-        <nav className={styles.nav}>
-          <Link href="/analyze" className={styles.searchBtn} data-testid="search-button">
-            Search a ticker →
-          </Link>
-          <AuthNav />
-        </nav>
-      </header>
+      <SiteHeader />
 
       <div className={styles.scanTabs} role="group" aria-label="board view">
         {TABS.map((t) => (

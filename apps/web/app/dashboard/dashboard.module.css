@@ -1,0 +1,114 @@
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sub {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .quick {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: var(--amber);
+}
+
+.cardIcon {
+  color: var(--amber);
+  margin-top: 2px;
+  flex: none;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.cardBody {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.comingWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.coming {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 620px) {
+  .coming {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comingCard {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  opacity: 0.85;
+}
+
+.comingTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.comingBody {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}

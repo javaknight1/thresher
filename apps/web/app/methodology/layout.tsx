@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { listSections } from '../../lib/methodology';
+import SiteHeader from '../../components/SiteHeader';
 import styles from './methodology.module.css';
 
 export const metadata: Metadata = {
@@ -16,14 +17,7 @@ export default function MethodologyLayout({ children }: { children: ReactNode })
 
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
-        <Link href="/methodology" className={`kicker ${styles.wordmark}`}>
-          THRESHER / METHODOLOGY
-        </Link>
-        <Link href="/" className={styles.backLink}>
-          ← back to the desk
-        </Link>
-      </header>
+      <SiteHeader showBack />
 
       <div className={styles.body}>
         <nav className={`panel ${styles.nav}`} aria-label="Methodology sections">

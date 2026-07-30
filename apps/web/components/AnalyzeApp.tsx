@@ -8,7 +8,6 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type {
@@ -25,7 +24,7 @@ import TradeStory from './TradeStory';
 import FamilyGrid from './FamilyGrid';
 import CompanyPanel from './CompanyPanel';
 import TooNew from './TooNew';
-import AuthNav from './AuthNav';
+import SiteHeader from './SiteHeader';
 import Footer from './Footer';
 import styles from '../app/page.module.css';
 
@@ -153,22 +152,7 @@ export default function AnalyzeApp() {
 
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
-        <div>
-          <Link href="/app" className={styles.wordmarkLink}>
-            <div className={styles.wordmark}>THRESHER</div>
-          </Link>
-          <div className={styles.tagline}>
-            technical confluence desk — full trade story from entry to exit
-          </div>
-        </div>
-        <nav className={styles.nav}>
-          <Link href="/app" className="deep-link mono">
-            ← top setups
-          </Link>
-          <AuthNav />
-        </nav>
-      </header>
+      <SiteHeader />
 
       <Controls
         onAnalyze={onAnalyze}
