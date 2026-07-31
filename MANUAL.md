@@ -106,6 +106,25 @@ absent → the app runs open (so local CI / e2e are unaffected). Landing page is
 > Per-user rate limits (userId instead of IP) land with Upstash — the shared
 > store is what makes them enforceable.
 
+## ☐ Scan cron (board freshness)
+
+The app reads the Top board from Upstash and never recomputes on a normal page
+load (that's what stopped the "different results each reload" bug). A scheduled
+job keeps those boards fresh via `GET /api/cron/scan?timeframe=…&key=CRON_SECRET`
+(one call per candle size). The scheduler is a **GitHub Action**
+(`.github/workflows/scan-cron.yml`, every 30 min during US market hours).
+
+1. Pick a random secret (e.g. `openssl rand -hex 24`).
+2. **Cloudflare:** add `CRON_SECRET` as a **runtime** Variable/Secret on the
+   Worker (Settings → Variables and Secrets) so the endpoint can check it.
+3. **GitHub:** repo → Settings → Secrets and variables → Actions → New secret →
+   `CRON_SECRET` (same value).
+4. Trigger the Action once manually (Actions tab → Refresh scan boards → Run
+   workflow) to warm the boards, then it runs on schedule.
+
+> Without `CRON_SECRET` the cron endpoint returns 503 and boards only refresh on
+> the ↻ Refresh button (or a cold cache) — still stable, just not auto-fresh.
+
 ## Needed at M2 (do not set up yet — listed for planning)
 
 ### ☐ Supabase (Postgres) — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`

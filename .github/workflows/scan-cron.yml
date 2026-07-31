@@ -1,0 +1,33 @@
+name: Refresh scan boards
+
+# Precompute the Top-board scans on a schedule so page reads serve warm boards
+# (the app reads from Upstash; only this job recomputes). US regular hours are
+# ~13:30–20:00 UTC (09:30–16:00 ET), Mon–Fri. Also runnable on demand.
+on:
+  schedule:
+    - cron: '*/30 13-20 * * 1-5'
+  workflow_dispatch: {}
+
+# Don't pile up runs if one is slow.
+concurrency:
+  group: scan-cron
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recompute each timeframe board
+        env:
+          BASE_URL: https://thresher.sharkfins.xyz
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET not set — add it as a repo secret"; exit 1; fi
+          fail=0
+          for tf in intraday swing position; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
+              "$BASE_URL/api/cron/scan?timeframe=$tf&key=$CRON_SECRET")
+            echo "$tf -> HTTP $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          exit $fail

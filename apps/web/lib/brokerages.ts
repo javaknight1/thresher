@@ -48,17 +48,46 @@ export const BROKERAGES: readonly Brokerage[] = [
     href: 'https://example.com/affiliate/schwab',
   },
   {
-    name: 'Interactive Brokers',
-    domain: 'interactivebrokers.com',
-    tag: 'Pro · global',
-    blurb: 'Low-cost access to global markets with professional-grade tools and margin.',
-    href: 'https://example.com/affiliate/ibkr',
-  },
-  {
     name: 'tastytrade',
     domain: 'tastytrade.com',
     tag: 'Options-focused',
     blurb: 'Platform built around options and derivatives with active-trader pricing.',
     href: 'https://example.com/affiliate/tastytrade',
+  },
+];
+
+/**
+ * Brokers that expose a trading API (OAuth). These are the ones that could, one
+ * day, support one-click execution from Thresher — they're grouped separately so
+ * that's clear. Nothing is wired to execute trades yet.
+ */
+export const API_BROKERAGES: readonly Brokerage[] = [
+  {
+    name: 'Alpaca',
+    domain: 'alpaca.markets',
+    tag: 'API-first · commission-free',
+    blurb: 'Developer-first broker built around a REST trading API and OAuth — plus a paper-trading sandbox.',
+    href: 'https://example.com/affiliate/alpaca',
+  },
+  {
+    name: 'Tradier',
+    domain: 'tradier.com',
+    tag: 'Brokerage API',
+    blurb: 'Brokerage with a REST trading API and OAuth for stocks and options.',
+    href: 'https://example.com/affiliate/tradier',
+  },
+  {
+    name: 'Interactive Brokers',
+    domain: 'interactivebrokers.com',
+    tag: 'Pro · Client Portal API',
+    blurb: 'Global markets and pro tools, with a Client Portal / Web API for programmatic orders.',
+    href: 'https://example.com/affiliate/ibkr',
+  },
+  {
+    name: 'SnapTrade',
+    domain: 'snaptrade.com',
+    tag: 'Aggregator · connects many brokers',
+    blurb: 'One API + OAuth that connects to many US brokers — the simplest path to broad broker support.',
+    href: 'https://example.com/affiliate/snaptrade',
   },
 ];
