@@ -14,6 +14,7 @@ import type {
   MarketDataProvider,
 } from './contracts';
 import { upstashConfigured } from './upstash';
+import { globalSingleton } from './global-singleton';
 import { WEB_CONFIG } from './config';
 
 /**
@@ -94,7 +95,7 @@ export function createBarCache(): BarCache {
   if (upstashConfigured()) {
     return new UpstashBarCache();
   }
-  return new MemoryBarCache();
+  return globalSingleton('thresher:bar-cache', () => new MemoryBarCache());
 }
 
 /** Fetch from the provider and write through to the cache. */

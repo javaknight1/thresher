@@ -7,6 +7,7 @@ import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import type { RateLimiter, RateLimitResult } from './contracts';
 import { upstashConfigured } from './upstash';
+import { globalSingleton } from './global-singleton';
 import { WEB_CONFIG } from './config';
 
 /** Both limits in WEB_CONFIG.rateLimit are per hour (design §2.1). */
@@ -91,5 +92,5 @@ export function createRateLimiter(): RateLimiter {
   if (upstashConfigured()) {
     return new UpstashRateLimiter();
   }
-  return new MemoryRateLimiter();
+  return globalSingleton('thresher:rate-limiter', () => new MemoryRateLimiter());
 }

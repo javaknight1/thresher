@@ -13,6 +13,7 @@ import type {
 } from './contracts';
 import { PHYSICAL_TTL_FACTOR } from './cache';
 import { upstashConfigured } from './upstash';
+import { globalSingleton } from './global-singleton';
 
 const MS_PER_SECOND = 1_000;
 
@@ -61,7 +62,7 @@ export function createProfileCache(): ProfileCache {
   if (upstashConfigured()) {
     return new UpstashProfileCache();
   }
-  return new MemoryProfileCache();
+  return globalSingleton('thresher:profile-cache', () => new MemoryProfileCache());
 }
 
 async function fetchAndStore(
