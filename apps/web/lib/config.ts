@@ -76,4 +76,15 @@ export const WEB_CONFIG = {
       deduct: { earnings: 12, overhead: 6, outlier: 8 }, // points off for risk flags
     },
   },
+  /**
+   * Follows (design: demand-driven universe). Each user follows up to
+   * `maxPerUser` symbols; the scan universe is the distinct union of all
+   * follows (plus the curated base as a non-empty fallback), so a followed
+   * stock is guaranteed to be scanned and cached. A brand-new user is seeded
+   * with `defaultWatchlist` so their board isn't empty on day one.
+   */
+  follows: {
+    maxPerUser: 20,
+    defaultWatchlist: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD', 'COIN'],
+  },
 } as const;

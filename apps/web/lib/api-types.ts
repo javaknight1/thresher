@@ -136,6 +136,14 @@ export interface ScanResponse {
   rows: ScanRow[];
 }
 
+/** GET/POST/DELETE /api/v1/follows response — the caller's current follow set. */
+export interface FollowsResponse {
+  /** symbols the signed-in user follows */
+  symbols: string[];
+  /** the per-user follow cap (WEB_CONFIG.follows.maxPerUser) */
+  max: number;
+}
+
 export type ApiErrorCode =
   | 'INVALID_REQUEST'
   | 'UNKNOWN_SYMBOL'
