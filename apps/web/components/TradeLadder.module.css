@@ -1,5 +1,9 @@
 .root {
   padding: 20px;
+  /* Fill the panel: the card next to us can be taller, so grow the ladder to
+     match instead of leaving dead space below a fixed-height gauge. */
+  display: flex;
+  flex-direction: column;
 }
 
 .heading {
@@ -12,9 +16,11 @@
 .ladder {
   display: flex;
   gap: 14px;
-  height: 190px;
-  /* The top label (TARGET) is offset ~16px above the gauge, so leave enough
-     headroom that it clears the "Trade ladder" heading. */
+  /* Grow to fill the panel (min keeps it readable when the panel is short).
+     The top label (TARGET) is offset ~16px above the gauge, so the top margin
+     leaves headroom that clears the "Trade ladder" heading. */
+  flex: 1;
+  min-height: 190px;
   margin-top: 28px;
 }
 
