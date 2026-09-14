@@ -17,11 +17,12 @@
   display: flex;
   gap: 14px;
   /* Grow to fill the panel (min keeps it readable when the panel is short).
-     The top label (TARGET) is offset ~16px above the gauge, so the top margin
-     leaves headroom that clears the "Trade ladder" heading. */
+     The TARGET/STOP labels overflow ~16px past the gauge top/bottom, so the
+     top/bottom margins keep them off the heading and the panel edge; the side
+     inset gives the gauge and prices breathing room too. */
   flex: 1;
   min-height: 190px;
-  margin-top: 28px;
+  margin: 26px 6px 20px;
 }
 
 .gauge {
