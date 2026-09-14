@@ -8,6 +8,7 @@ import { BROKERAGES, API_BROKERAGES, BROKERAGE_DISCLOSURE, type Brokerage } from
 import SiteHeader from '../../components/SiteHeader';
 import Logo from '../../components/Logo';
 import Footer from '../../components/Footer';
+import PageHero from '../../components/PageHero';
 import styles from './brokerage.module.css';
 
 export const metadata = {
@@ -38,15 +39,11 @@ export default function BrokeragePage() {
     <>
       <SiteHeader />
       <div className={styles.page} data-testid="brokerage-page">
-        <section className={styles.intro}>
-          <div className={styles.kicker}>brokerages</div>
-          <h1 className={styles.title}>Where to place the trades</h1>
-          <p className={styles.sub}>
-            Thresher doesn’t execute orders — it hands you a defined-risk plan. These are established
-            brokers you can open an account with to act on it.
-          </p>
-          <p className={styles.disclosure}>{BROKERAGE_DISCLOSURE}</p>
-        </section>
+        <PageHero kicker="brokerages" title="Where to place the trades">
+          Thresher doesn’t execute orders — it hands you a defined-risk plan. These are established
+          brokers you can open an account with to act on it.
+        </PageHero>
+        <p className={styles.disclosure}>{BROKERAGE_DISCLOSURE}</p>
 
         <section className={styles.grid}>
           {BROKERAGES.map((b) => (

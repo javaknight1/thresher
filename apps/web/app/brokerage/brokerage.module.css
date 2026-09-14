@@ -69,11 +69,18 @@
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--amber) 65%, var(--border));
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--amber) 14%, transparent);
+  transform: translateY(-1px);
 }
 
 .cardHead {
@@ -107,13 +114,19 @@
 
 .cardCta {
   align-self: flex-start;
-  margin-top: 6px;
+  margin-top: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--amber);
+  background: transparent;
   color: var(--amber);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   text-decoration: none;
+  transition: all 0.15s;
 }
 
 .cardCta:hover {
-  text-decoration: underline;
+  background: var(--amber);
+  color: var(--bg);
 }

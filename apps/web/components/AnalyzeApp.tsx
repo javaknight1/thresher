@@ -28,6 +28,7 @@ import SiteHeader from './SiteHeader';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
 import FollowButton from './FollowButton';
+import PageHero from './PageHero';
 import { AnalyzeSkeleton, ProfileSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
 
@@ -166,6 +167,13 @@ export default function AnalyzeApp() {
     <>
       <SiteHeader />
       <div className={styles.shell}>
+
+      {!activeSymbol && (
+        <PageHero kicker="analyze" title="Analyze any ticker">
+          Enter a symbol for a complete, defined-risk trade plan — entry, stop, target, and the
+          reasoning behind them — or an honest “no trade”.
+        </PageHero>
+      )}
 
       {activeSymbol && (
         <div className={styles.analyzeHead}>

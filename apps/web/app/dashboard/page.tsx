@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import SiteHeader from '../../components/SiteHeader';
 import Footer from '../../components/Footer';
+import PageHero from '../../components/PageHero';
 import DashboardFollows from '../../components/DashboardFollows';
 import { IconLeaderboard, IconSearch, IconBrokerage } from '../../components/icons';
 import styles from './dashboard.module.css';
@@ -48,14 +49,9 @@ export default function DashboardPage() {
     <>
       <SiteHeader />
       <div className={styles.page} data-testid="dashboard-page">
-        <section className={styles.hero}>
-          <div className={styles.heroText}>
-            <h1 className={styles.title}>Your desk</h1>
-            <p className={styles.sub}>
-              Follow the names you care about — those are the ones Thresher scans and keeps warm.
-            </p>
-          </div>
-        </section>
+        <PageHero title="Your desk">
+          Follow the names you care about — those are the ones Thresher scans and keeps warm.
+        </PageHero>
 
         <section className={styles.watchlist}>
           <DashboardFollows />

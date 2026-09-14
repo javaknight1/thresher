@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { GUIDE_SECTIONS, GLOSSARY } from '../../lib/guide-content';
 import SiteHeader from '../../components/SiteHeader';
 import Footer from '../../components/Footer';
+import PageHero from '../../components/PageHero';
 import GuideIntroButton from '../../components/GuideIntroButton';
 import styles from './guide.module.css';
 
@@ -21,19 +22,18 @@ export default function GuidePage() {
     <>
       <SiteHeader showBack />
       <div className={styles.page} data-testid="guide-page">
-        <section className={styles.intro}>
-        <div className={styles.kicker}>the guide</div>
-        <h1 className={styles.title}>Everything you need to get started</h1>
-        <p className={styles.sub}>
+        <PageHero
+          kicker="the guide"
+          title="Everything you need to get started"
+          actions={<GuideIntroButton />}
+        >
           Thresher turns a ticker into a complete, defined-risk trade — or an honest “no trade”.
           Here’s how to read what it shows. For the full formulas behind every number, see the{' '}
           <Link href="/methodology" className="deep-link">
             methodology
           </Link>
           .
-        </p>
-        <GuideIntroButton />
-      </section>
+        </PageHero>
 
       {GUIDE_SECTIONS.map((s, i) => (
         <section key={s.id} className={styles.section} data-testid={`guide-section-${s.id}`}>

@@ -7,40 +7,6 @@
   gap: 26px;
 }
 
-/* ---- hero ---- */
-.hero {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 26px 24px;
-  background:
-    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--amber) 18%, transparent), transparent 55%),
-    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--long) 14%, transparent), transparent 55%),
-    var(--panel);
-}
-
-.heroText {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.title {
-  margin: 0;
-  font-size: 30px;
-  color: var(--text);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.sub {
-  margin: 0;
-  font-size: 15px;
-  color: var(--muted);
-  max-width: 60ch;
-}
-
 /* ---- watchlist ---- */
 .watchlist {
   border: 1px solid var(--border);

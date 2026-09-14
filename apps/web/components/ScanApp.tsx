@@ -19,6 +19,7 @@ import SiteHeader from './SiteHeader';
 import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
+import PageHero from './PageHero';
 import { ScanBoardSkeleton } from './Skeleton';
 import { useFollows } from '../lib/follows-client';
 import styles from '../app/page.module.css';
@@ -215,6 +216,11 @@ function ScanView() {
       <OnboardingGate />
       <SiteHeader />
       <div className={styles.shell}>
+        <PageHero kicker="leaderboard" title="Top setups">
+          The best defined-risk setups the engine sees right now, ranked by Setup Score. Filter by
+          candle size, or narrow to the symbols you follow.
+        </PageHero>
+
         <div className={styles.scanTabs} role="group" aria-label="board view">
         {TABS.map((t) => (
           <button
