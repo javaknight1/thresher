@@ -13,7 +13,9 @@
   display: flex;
   gap: 14px;
   height: 190px;
-  margin-top: 12px;
+  /* The top label (TARGET) is offset ~16px above the gauge, so leave enough
+     headroom that it clears the "Trade ladder" heading. */
+  margin-top: 28px;
 }
 
 .gauge {
