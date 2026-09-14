@@ -25,6 +25,12 @@ export interface RunScanInput {
   now?: () => Date;
   /** injectable universe for deterministic tests; defaults to buildUniverse */
   universe?: readonly string[];
+  /**
+   * Followed symbols (union across all users) — always scanned, listed first,
+   * so a followed stock is guaranteed to be cached (design: demand-driven
+   * universe). Ignored when `universe` is supplied.
+   */
+  followed?: readonly string[];
 }
 
 /** First sentence of the engine story, as the one-line driver (design §6.3). */
@@ -35,11 +41,17 @@ function firstSentence(story: string): string {
 }
 
 /**
- * Candidate universe = curated base (listed first) ∪ provider movers, upper-
- * cased, validated, deduped, and capped at WEB_CONFIG.scan.maxUniverse. Movers
- * are best-effort: a failure just yields the curated list alone.
+ * Candidate universe = followed symbols (listed first, always scanned) ∪ the
+ * curated base (non-empty fallback when nobody follows anything) ∪ provider
+ * movers, upper-cased, validated, deduped, and capped at
+ * WEB_CONFIG.scan.maxUniverse. Movers are best-effort: a failure just yields
+ * follows + curated. Passing `followed` is what makes the universe
+ * demand-driven — a followed stock can never be dropped by the cap.
  */
-export async function buildUniverse(provider: MarketDataProvider): Promise<string[]> {
+export async function buildUniverse(
+  provider: MarketDataProvider,
+  followed: readonly string[] = [],
+): Promise<string[]> {
   let movers: string[] = [];
   try {
     movers = await provider.getMovers();
@@ -48,7 +60,7 @@ export async function buildUniverse(provider: MarketDataProvider): Promise<strin
   }
   const seen = new Set<string>();
   const universe: string[] = [];
-  for (const raw of [...WEB_CONFIG.scan.curated, ...movers]) {
+  for (const raw of [...followed, ...WEB_CONFIG.scan.curated, ...movers]) {
     const symbol = raw.toUpperCase();
     if (!SYMBOL_PATTERN.test(symbol) || seen.has(symbol)) continue;
     seen.add(symbol);
@@ -79,7 +91,7 @@ async function mapLimit<T, R>(
 export async function runScan(input: RunScanInput): Promise<ScanResponse> {
   const { provider, cache, timeframe } = input;
   const now = input.now ?? (() => new Date());
-  const universe = input.universe ?? (await buildUniverse(provider));
+  const universe = input.universe ?? (await buildUniverse(provider, input.followed ?? []));
 
   const results = await mapLimit(universe, WEB_CONFIG.scan.concurrency, (symbol) =>
     runAnalysis({ symbol, timeframe, provider, cache, now }),

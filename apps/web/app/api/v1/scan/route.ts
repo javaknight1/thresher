@@ -17,6 +17,7 @@ import type { ApiError } from '../../../../lib/api-types';
 import { createBarCache } from '../../../../lib/cache';
 import { createRateLimiter } from '../../../../lib/ratelimit';
 import { createScanStore } from '../../../../lib/scan-store';
+import { createFollowStore } from '../../../../lib/follow-store';
 import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runScan } from '../../../../lib/scan-service';
@@ -30,6 +31,9 @@ const rateLimiter = createRateLimiter();
 // Shared board store (Upstash when configured) so every isolate sees the same
 // computed board and it survives deploys — otherwise each isolate recomputes.
 const boardStore = createScanStore();
+// Followed symbols (union across users) drive the scan universe — a followed
+// stock is always scanned, so its data gets cached (design: demand-driven).
+const followStore = createFollowStore();
 
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 const MS_PER_SECOND = 1_000;
@@ -94,7 +98,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let board;
   try {
-    board = await runScan({ timeframe, provider: getProvider(), cache: barCache });
+    const followed = await followStore.allSymbols().catch(() => []);
+    board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
   } catch (err) {
     // Recompute failed — serve the last-good (cached) board rather than dropping
     // this timeframe out of the aggregated Top view.

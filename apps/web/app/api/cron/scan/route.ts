@@ -12,6 +12,7 @@ import type { NextRequest } from 'next/server';
 import type { Timeframe } from '@thresher/engine';
 import { createBarCache } from '../../../../lib/cache';
 import { createScanStore } from '../../../../lib/scan-store';
+import { createFollowStore } from '../../../../lib/follow-store';
 import { getProvider } from '../../../../lib/providers/select';
 import { runScan } from '../../../../lib/scan-service';
 import { WEB_CONFIG } from '../../../../lib/config';
@@ -20,6 +21,7 @@ export const runtime = 'nodejs';
 
 const barCache = createBarCache();
 const boardStore = createScanStore();
+const followStore = createFollowStore();
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -38,7 +40,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const timeframe = rawTimeframe as Timeframe;
 
-  const board = await runScan({ timeframe, provider: getProvider(), cache: barCache });
+  const followed = await followStore.allSymbols().catch(() => []);
+  const board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
   await boardStore.set(timeframe, board, WEB_CONFIG.cache.ttlSeconds[timeframe]);
   return NextResponse.json(
     { ok: true, timeframe, emitted: board.emitted, universeSize: board.universeSize, asOf: board.asOf },

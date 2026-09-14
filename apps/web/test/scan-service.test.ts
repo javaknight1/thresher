@@ -23,6 +23,16 @@ describe('buildUniverse', () => {
     expect(universe).toContain('MOCKLONG');
   });
 
+  it('lists followed symbols first and never drops them to the cap', async () => {
+    const followed = ['ZZZ', 'YYY'];
+    const universe = await buildUniverse(new MockProvider(), followed);
+    expect(universe.slice(0, 2)).toEqual(['ZZZ', 'YYY']); // followed lead
+    expect(universe).toContain('ZZZ');
+    expect(universe).toContain('YYY');
+    expect(universe.length).toBeLessThanOrEqual(WEB_CONFIG.scan.maxUniverse);
+    expect(new Set(universe).size).toBe(universe.length);
+  });
+
   it('falls back to the curated universe when getMovers throws', async () => {
     const provider = new MockProvider();
     provider.getMovers = async () => {
