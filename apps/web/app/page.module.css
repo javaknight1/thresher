@@ -107,6 +107,12 @@
   letter-spacing: 0.02em;
 }
 
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .filterBar {
   display: flex;
   align-items: center;

@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type {
   AnalyzeResponse,
@@ -29,6 +29,7 @@ import SiteHeader from './SiteHeader';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
 import FollowButton from './FollowButton';
+import ShareButton from './ShareButton';
 import PageHero from './PageHero';
 import { AnalyzeSkeleton, ProfileSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
@@ -56,13 +57,21 @@ function isTimeframe(v: string | null): v is Timeframe {
 
 export default function AnalyzeApp() {
   const searchParams = useSearchParams();
-  const [timeframe, setTimeframe] = useState<Timeframe>('swing');
+  const router = useRouter();
+  // Timeframe is a URL option (?timeframe=): seed it from the URL so a shared
+  // link opens on the right candle size even before a symbol is analyzed.
+  const [timeframe, setTimeframe] = useState<Timeframe>(() => {
+    const t = searchParams.get('timeframe');
+    return isTimeframe(t) ? t : 'swing';
+  });
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeData | null>(null);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [profileFailed, setProfileFailed] = useState(false);
   const [error, setError] = useState<ErrorState | null>(null);
   const [loading, setLoading] = useState(false);
+  // Guards the deep-link effect from re-running when WE change the URL.
+  const lastDeepLink = useRef<string | null>(null);
 
   const loadAnalysis = useCallback(async (symbol: string, tf: Timeframe) => {
     setLoading(true);
@@ -111,6 +120,22 @@ export default function AnalyzeApp() {
     }
   }, []);
 
+  // Reflect the current symbol + timeframe in the URL so it's shareable and the
+  // Back button works between analyses. Bumping the guard prevents the deep-link
+  // effect from treating our own URL change as a fresh navigation.
+  const syncUrl = useCallback(
+    (symbol: string, tf: Timeframe) => {
+      lastDeepLink.current = `${symbol}:${tf}`;
+      router.replace(`/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`, {
+        scroll: false,
+      });
+    },
+    [router],
+  );
+
+  // Loads a symbol without touching the URL — the deep-link effect uses this on
+  // arrival (the URL is already correct), and user actions add their own
+  // syncUrl so an in-mount router.replace never races React's mount.
   const run = useCallback(
     (symbol: string, tf: Timeframe) => {
       setActiveSymbol(symbol);
@@ -125,24 +150,32 @@ export default function AnalyzeApp() {
   );
 
   const onAnalyze = useCallback(
-    (symbol: string) => run(symbol, timeframe),
-    [run, timeframe],
+    (symbol: string) => {
+      syncUrl(symbol, timeframe);
+      run(symbol, timeframe);
+    },
+    [run, syncUrl, timeframe],
   );
 
-  // Switching timeframe re-runs the analysis but not the (symbol-scoped) profile.
+  // Clicking a timeframe re-runs the analysis (not the symbol-scoped profile)
+  // and updates the URL option.
   const onTimeframe = useCallback(
     (tf: Timeframe) => {
       setTimeframe(tf);
-      if (activeSymbol) void loadAnalysis(activeSymbol, tf);
+      if (activeSymbol) {
+        syncUrl(activeSymbol, tf);
+        void loadAnalysis(activeSymbol, tf);
+      } else {
+        router.replace(`/analyze?timeframe=${tf}`, { scroll: false });
+      }
     },
-    [activeSymbol, loadAnalysis],
+    [activeSymbol, loadAnalysis, syncUrl, router],
   );
 
   // Deep link: ?symbol=&timeframe= (from the Scan board or a shared URL) runs
   // once on arrival. Keyed to the URL so navigating between rows re-runs.
   const urlSymbol = searchParams.get('symbol');
   const urlTf = searchParams.get('timeframe');
-  const lastDeepLink = useRef<string | null>(null);
   useEffect(() => {
     if (!urlSymbol) return;
     const key = `${urlSymbol}:${urlTf ?? ''}`;
@@ -166,7 +199,10 @@ export default function AnalyzeApp() {
       {activeSymbol && (
         <div className={styles.analyzeHead}>
           <span className={styles.analyzeSymbol}>{activeSymbol}</span>
-          <FollowButton symbol={activeSymbol} />
+          <div className={styles.headActions}>
+            <ShareButton />
+            <FollowButton symbol={activeSymbol} />
+          </div>
         </div>
       )}
 

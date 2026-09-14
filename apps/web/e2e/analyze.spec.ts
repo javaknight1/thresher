@@ -20,6 +20,26 @@ async function analyze(page: Page, symbol: string): Promise<void> {
   await page.getByTestId('analyze-button').click();
 }
 
+test.describe('analyze url + share', () => {
+  test('timeframe is a URL option: seeded from it, and clicking a pill updates it', async ({
+    page,
+  }) => {
+    // Seeded from the URL: arriving on ?timeframe=position selects Weekly.
+    await page.goto('/analyze?symbol=MOCKLONG&timeframe=position');
+    await expect(page.getByTestId('direction-badge')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('tf-position')).toHaveAttribute('aria-pressed', 'true');
+
+    // Clicking a different candle size rewrites the URL param.
+    await page.getByTestId('tf-swing').click();
+    await expect(page).toHaveURL(/[?&]timeframe=swing/);
+    await expect(page).toHaveURL(/[?&]symbol=MOCKLONG/);
+    await expect(page.getByTestId('tf-swing')).toHaveAttribute('aria-pressed', 'true');
+
+    // The share/copy-link button is present.
+    await expect(page.getByTestId('share-link')).toBeVisible();
+  });
+});
+
 test.describe('analyze smoke', () => {
   test('liquid symbol renders a full trade plan', async ({ page }) => {
     await analyze(page, 'MOCKLONG');
