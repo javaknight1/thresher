@@ -1,0 +1,123 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto 28px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.row:hover {
+  border-color: color-mix(in srgb, var(--amber) 55%, var(--border));
+}
+
+.idcol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sym {
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sym:hover {
+  color: var(--amber);
+}
+
+.name {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pricecol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.price {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.up {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--long);
+}
+
+.down {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--short);
+}
+
+.view {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.view:hover {
+  color: var(--bg);
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.remove {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.remove:hover {
+  color: var(--short);
+}
+
+.empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+@media (max-width: 620px) {
+  .row {
+    grid-template-columns: 30px minmax(0, 1fr) auto 24px;
+  }
+  .view {
+    display: none;
+  }
+}

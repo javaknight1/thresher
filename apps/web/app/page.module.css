@@ -92,16 +92,19 @@
   margin-top: -4px;
 }
 
-.followRow {
+.analyzeHead {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.followHint {
-  font-size: 12px;
-  color: var(--muted);
+.analyzeSymbol {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
 }
 
 .filterBar {

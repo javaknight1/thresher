@@ -4,28 +4,52 @@
   padding: 20px 20px 60px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 26px;
 }
 
-.intro {
+/* ---- hero ---- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 26px 24px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--amber) 18%, transparent), transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--long) 14%, transparent), transparent 55%),
+    var(--panel);
+}
+
+.heroText {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .title {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .sub {
   margin: 0;
   font-size: 15px;
   color: var(--muted);
+  max-width: 60ch;
 }
 
+/* ---- watchlist ---- */
+.watchlist {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--panel);
+}
+
+/* ---- colorful quick links ---- */
 .quick {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -39,25 +63,37 @@
 }
 
 .card {
+  --accent: var(--amber);
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 18px;
   text-decoration: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 
 .card:hover {
-  border-color: var(--amber);
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border));
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.cardIconWrap {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex: none;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .cardIcon {
-  color: var(--amber);
-  margin-top: 2px;
-  flex: none;
+  color: var(--accent);
 }
 
 .cardTitle {
@@ -73,10 +109,7 @@
   color: var(--muted);
 }
 
-.following {
-  margin-top: 4px;
-}
-
+/* ---- coming soon ---- */
 .comingWrap {
   display: flex;
   flex-direction: column;
@@ -87,7 +120,7 @@
 
 .coming {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 

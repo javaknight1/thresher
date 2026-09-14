@@ -1,12 +1,13 @@
 /**
- * Dashboard (/dashboard) — protected landing hub. Intentionally light for now:
- * quick actions + a preview of what's coming (watchlist, recent, alerts, the
- * hit-rate board). Personalized widgets land as those features ship.
+ * Dashboard (/dashboard) — the signed-in home. Centerpiece is the watchlist:
+ * an autocomplete search to add follows + a leaderboard-style followed list.
+ * Colorful quick-links and a short "coming soon" strip round it out.
  */
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import SiteHeader from '../../components/SiteHeader';
 import Footer from '../../components/Footer';
-import FollowingManager from '../../components/FollowingManager';
+import DashboardFollows from '../../components/DashboardFollows';
 import { IconLeaderboard, IconSearch, IconBrokerage } from '../../components/icons';
 import styles from './dashboard.module.css';
 
@@ -18,18 +19,21 @@ const QUICK = [
     title: 'Leaderboard',
     body: 'Today’s top setups across every candle size.',
     Icon: IconLeaderboard,
+    accent: 'var(--amber)',
   },
   {
     href: '/analyze',
     title: 'Search a ticker',
     body: 'Full trade plan for any symbol — or an honest refusal.',
     Icon: IconSearch,
+    accent: 'var(--long)',
   },
   {
     href: '/brokerage',
     title: 'Brokerages',
     body: 'Where to open an account and place the trades.',
     Icon: IconBrokerage,
+    accent: '#6ea8fe',
   },
 ];
 
@@ -44,41 +48,51 @@ export default function DashboardPage() {
     <>
       <SiteHeader />
       <div className={styles.page} data-testid="dashboard-page">
+        <section className={styles.hero}>
+          <div className={styles.heroText}>
+            <h1 className={styles.title}>Your desk</h1>
+            <p className={styles.sub}>
+              Follow the names you care about — those are the ones Thresher scans and keeps warm.
+            </p>
+          </div>
+        </section>
 
-      <section className={styles.intro}>
-        <h1 className={styles.title}>Dashboard</h1>
-        <p className={styles.sub}>Your home base. Jump into the board, or search a ticker.</p>
-      </section>
+        <section className={styles.watchlist}>
+          <DashboardFollows />
+        </section>
 
-      <section className={styles.quick}>
-        {QUICK.map(({ href, title, body, Icon }) => (
-          <Link key={href} href={href} className={styles.card}>
-            <Icon className={styles.cardIcon} />
-            <div>
-              <div className={styles.cardTitle}>{title}</div>
-              <div className={styles.cardBody}>{body}</div>
-            </div>
-          </Link>
-        ))}
-      </section>
-
-      <section className={styles.following}>
-        <FollowingManager />
-      </section>
-
-      <section className={styles.comingWrap}>
-        <div className="kicker">Coming soon</div>
-        <div className={styles.coming}>
-          {COMING.map((c) => (
-            <div key={c.title} className={styles.comingCard}>
-              <div className={styles.comingTitle}>{c.title}</div>
-              <div className={styles.comingBody}>{c.body}</div>
-            </div>
+        <section className={styles.quick}>
+          {QUICK.map(({ href, title, body, Icon, accent }) => (
+            <Link
+              key={href}
+              href={href}
+              className={styles.card}
+              style={{ '--accent': accent } as CSSProperties}
+            >
+              <span className={styles.cardIconWrap}>
+                <Icon className={styles.cardIcon} />
+              </span>
+              <div>
+                <div className={styles.cardTitle}>{title}</div>
+                <div className={styles.cardBody}>{body}</div>
+              </div>
+            </Link>
           ))}
-        </div>
-      </section>
+        </section>
 
-      <Footer />
+        <section className={styles.comingWrap}>
+          <div className="kicker">Coming soon</div>
+          <div className={styles.coming}>
+            {COMING.map((c) => (
+              <div key={c.title} className={styles.comingCard}>
+                <div className={styles.comingTitle}>{c.title}</div>
+                <div className={styles.comingBody}>{c.body}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <Footer />
       </div>
     </>
   );

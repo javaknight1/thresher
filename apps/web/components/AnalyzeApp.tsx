@@ -167,6 +167,13 @@ export default function AnalyzeApp() {
       <SiteHeader />
       <div className={styles.shell}>
 
+      {activeSymbol && (
+        <div className={styles.analyzeHead}>
+          <span className={styles.analyzeSymbol}>{activeSymbol}</span>
+          <FollowButton symbol={activeSymbol} />
+        </div>
+      )}
+
       <Controls
         onAnalyze={onAnalyze}
         timeframe={timeframe}
@@ -176,15 +183,6 @@ export default function AnalyzeApp() {
         loading={loading}
         freshness={data ? { dataFreshness: data.dataFreshness, stale: data.stale } : null}
       />
-
-      {activeSymbol && (
-        <div className={styles.followRow}>
-          <FollowButton symbol={activeSymbol} />
-          <span className={styles.followHint}>
-            Follow to keep {activeSymbol} on your board and its data warm.
-          </span>
-        </div>
-      )}
 
       {error && (
         <div role="alert" data-testid="error-banner" className={styles.error}>

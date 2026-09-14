@@ -1,35 +1,52 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Follow flow (keyless e2e → identity is the request IP, MemoryFollowStore).
- * Follow MOCKLONG from the Analyze page, see it on the board's Following tab
- * and in the dashboard manager, then unfollow (also restores a clean state for
- * the rest of the run, since the in-memory store is shared per dev server).
+ * Follow flows (keyless e2e → identity is the request IP, MemoryFollowStore,
+ * shared per dev server). Each test cleans up the symbols it follows.
  */
-test('follow a symbol, see it under Following + dashboard, then unfollow', async ({ page }) => {
+
+test('follow from Analyze, see it under Following + the dashboard watchlist, then unfollow', async ({
+  page,
+}) => {
   await page.goto('/analyze?symbol=MOCKLONG&timeframe=swing');
 
+  // Follow button lives top-right of the analysis header.
   const btn = page.getByTestId('follow-MOCKLONG');
   await expect(btn).toBeVisible({ timeout: 30_000 });
-
-  // Normalize to "not following" first (in case a prior case left state).
   if ((await btn.getAttribute('aria-pressed')) === 'true') {
     await btn.click();
     await expect(btn).toHaveAttribute('aria-pressed', 'false');
   }
-
   await btn.click();
   await expect(btn).toHaveAttribute('aria-pressed', 'true');
 
-  // The Following board tab shows the followed setup.
+  // Following board tab.
   await page.goto('/app?tab=following');
-  await expect(page.getByTestId('scan-tab-following')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
-  // The dashboard manager lists it, and unfollow removes it.
+  // Dashboard watchlist (leaderboard-style list) + unfollow.
   await page.goto('/dashboard');
-  await expect(page.getByTestId('following-manager')).toBeVisible();
-  await expect(page.getByTestId('following-MOCKLONG')).toBeVisible();
-  await page.getByTestId('unfollow-MOCKLONG').click();
-  await expect(page.getByTestId('following-MOCKLONG')).toHaveCount(0);
+  await expect(page.getByTestId('dashboard-follows')).toBeVisible();
+  await expect(page.getByTestId('followed-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('followed-unfollow-MOCKLONG').click();
+  await expect(page.getByTestId('followed-row-MOCKLONG')).toHaveCount(0);
+});
+
+test('dashboard autocomplete: typing a name finds the ticker and follows it', async ({ page }) => {
+  await page.goto('/dashboard');
+  const input = page.getByTestId('symbol-search-input');
+  await expect(input).toBeVisible();
+
+  await input.fill('nvid'); // → NVIDIA / NVDA
+  const result = page.getByTestId('search-result-NVDA');
+  await expect(result).toBeVisible({ timeout: 10_000 });
+  await expect(result).toContainText('NVIDIA');
+
+  await result.click();
+  // Now followed → appears in the watchlist list with a price snapshot.
+  await expect(page.getByTestId('followed-row-NVDA')).toBeVisible({ timeout: 10_000 });
+
+  // Clean up.
+  await page.getByTestId('followed-unfollow-NVDA').click();
+  await expect(page.getByTestId('followed-row-NVDA')).toHaveCount(0);
 });
