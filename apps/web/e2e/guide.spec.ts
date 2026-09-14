@@ -32,4 +32,6 @@ test('the shared footer (guide + methodology links) appears on the board', async
   await expect(page.getByTestId('site-footer')).toBeVisible();
   await expect(page.getByTestId('footer-guide')).toBeVisible();
   await expect(page.getByTestId('footer-methodology')).toBeVisible();
+  // App version renders as a semver (survives future bumps).
+  await expect(page.getByTestId('app-version')).toHaveText(/^v\d+\.\d+\.\d+/);
 });

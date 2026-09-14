@@ -22,7 +22,7 @@ export default tseslint.config(
     // Node build scripts and ESM config files run under Node, not the browser.
     files: ['**/*.mjs', '**/scripts/**'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly' },
+      globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
     },
   },
 );

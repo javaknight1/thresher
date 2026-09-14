@@ -29,6 +29,11 @@ export default function Footer() {
             Logos by Logo.dev
           </a>
         )}
+        {process.env.NEXT_PUBLIC_APP_VERSION && (
+          <span className={styles.version} data-testid="app-version">
+            v{process.env.NEXT_PUBLIC_APP_VERSION}
+          </span>
+        )}
       </nav>
       <Disclaimer />
     </footer>
