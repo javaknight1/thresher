@@ -44,6 +44,14 @@ class FakeProvider implements MarketDataProvider {
   async getMovers(): Promise<string[]> {
     return [];
   }
+
+  async search(): Promise<never[]> {
+    return [];
+  }
+
+  async getQuotes(): Promise<never[]> {
+    return [];
+  }
 }
 
 const now = () => NOW;

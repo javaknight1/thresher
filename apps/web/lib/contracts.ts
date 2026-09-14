@@ -39,6 +39,40 @@ export interface MarketDataProvider {
    * goes through the full pure engine before it can appear on the board.
    */
   getMovers(): Promise<string[]>;
+  /**
+   * Autocomplete: match a free-text query (company name or ticker) to candidate
+   * symbols, e.g. "nvid" → NVDA. Best-effort: returns [] on failure, never
+   * throws. Powers the symbol search box; does not touch the engine.
+   */
+  search(query: string): Promise<SymbolMatch[]>;
+  /**
+   * Lightweight batch quote (price + day change + name) for a list of symbols —
+   * for the followed-stocks list, which needs a cheap snapshot, not a full
+   * analysis. Best-effort: a symbol that fails is simply omitted; never throws.
+   */
+  getQuotes(symbols: string[]): Promise<SymbolQuote[]>;
+}
+
+/** One autocomplete match (company name / ticker → symbol). */
+export interface SymbolMatch {
+  symbol: string;
+  /** company display name (longname ?? shortname), or null */
+  name: string | null;
+  /** exchange display name, e.g. "NASDAQ", or null */
+  exchange: string | null;
+  /** instrument type, e.g. "EQUITY" / "ETF", or null */
+  type: string | null;
+}
+
+/** A cheap price snapshot for the followed list (no engine involvement). */
+export interface SymbolQuote {
+  symbol: string;
+  name: string | null;
+  /** regular-market price, or null when unavailable */
+  price: number | null;
+  /** regular-market change for the session, in percent (e.g. -1.23), or null */
+  changePct: number | null;
+  currency: string | null;
 }
 
 /** One past quarter's earnings: reported vs. expected (Yahoo earningsHistory). */

@@ -19,8 +19,31 @@ import {
   type CompanyProfile,
   type EarningsQuarter,
   type MarketDataProvider,
+  type SymbolMatch,
+  type SymbolQuote,
 } from '../contracts';
 import { WEB_CONFIG } from '../config';
+
+/**
+ * A small deterministic catalog so the mock provider's autocomplete behaves
+ * like the real thing in tests/e2e (e.g. "nvid" → NVDA). Real names let the UI
+ * show a plausible company alongside each ticker.
+ */
+const MOCK_CATALOG: ReadonlyArray<{ symbol: string; name: string }> = [
+  { symbol: 'NVDA', name: 'NVIDIA Corporation' },
+  { symbol: 'AAPL', name: 'Apple Inc.' },
+  { symbol: 'MSFT', name: 'Microsoft Corporation' },
+  { symbol: 'AMZN', name: 'Amazon.com, Inc.' },
+  { symbol: 'META', name: 'Meta Platforms, Inc.' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+  { symbol: 'TSLA', name: 'Tesla, Inc.' },
+  { symbol: 'AMD', name: 'Advanced Micro Devices, Inc.' },
+  { symbol: 'NFLX', name: 'Netflix, Inc.' },
+  { symbol: 'COIN', name: 'Coinbase Global, Inc.' },
+  { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
+  { symbol: 'XOM', name: 'Exxon Mobil Corporation' },
+  { symbol: 'MOCKLONG', name: 'Mocklong Industries, Inc.' },
+];
 
 /** Engine needs ≥130 bars (minBarsFactor × MACD slow); 300 gives headroom. */
 const BAR_COUNT = 300;
@@ -273,5 +296,31 @@ export class MockProvider implements MarketDataProvider {
    */
   async getMovers(): Promise<string[]> {
     return ['MOCKLONG', 'MOCKCHOP', 'MOCKNEW', 'MOCKUNKNOWN', 'GENONE', 'GENTWO'];
+  }
+
+  /** Deterministic autocomplete over MOCK_CATALOG (symbol prefix or name substring). */
+  async search(query: string): Promise<SymbolMatch[]> {
+    const q = query.trim().toUpperCase();
+    if (!q) return [];
+    return MOCK_CATALOG.filter(
+      (c) => c.symbol.startsWith(q) || c.name.toUpperCase().includes(q),
+    )
+      .slice(0, 8)
+      .map((c) => ({ symbol: c.symbol, name: c.name, exchange: 'NasdaqGS', type: 'EQUITY' }));
+  }
+
+  /** Deterministic batch quote: price from the series spec, a stable pseudo day-change. */
+  async getQuotes(symbols: string[]): Promise<SymbolQuote[]> {
+    return symbols
+      .map((raw) => raw.toUpperCase())
+      .filter((sym) => sym !== 'MOCKUNKNOWN')
+      .map((sym) => {
+        const seed = fnv1a(`${sym}:quote`);
+        const spec = SPECS[sym] ?? genericSpec(fnv1a(`${sym}:swing`));
+        const name = MOCK_CATALOG.find((c) => c.symbol === sym)?.name ?? `${sym} Industries, Inc.`;
+        // Deterministic day change in [-8, +8]%.
+        const changePct = +(((seed % 1600) / 100) - 8).toFixed(2);
+        return { symbol: sym, name, price: +spec.base.toFixed(2), changePct, currency: 'USD' };
+      });
   }
 }

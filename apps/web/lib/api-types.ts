@@ -3,7 +3,17 @@
  * The UI consumes exactly these shapes.
  */
 import type { AnalysisResult, Bar, Timeframe } from '@thresher/engine';
-import type { CompanyProfile } from './contracts';
+import type { CompanyProfile, SymbolMatch, SymbolQuote } from './contracts';
+
+/** GET /api/v1/search?q= — autocomplete matches (name/ticker → symbol). */
+export interface SearchResponse {
+  results: SymbolMatch[];
+}
+
+/** GET /api/v1/quote?symbols=A,B — cheap price snapshots for the followed list. */
+export interface QuoteResponse {
+  quotes: SymbolQuote[];
+}
 
 export interface ChartPayload {
   /** last ~130 bars (WEB_CONFIG.chart.bars) */

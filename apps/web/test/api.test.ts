@@ -235,6 +235,12 @@ describe('runAnalysis — caching', () => {
     getMovers(): Promise<string[]> {
       return this.inner.getMovers();
     }
+    search(query: string) {
+      return this.inner.search(query);
+    }
+    getQuotes(symbols: string[]) {
+      return this.inner.getQuotes(symbols);
+    }
   }
 
   it('second analysis with the same cache serves bars without a provider call', async () => {

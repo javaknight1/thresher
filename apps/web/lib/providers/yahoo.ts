@@ -14,6 +14,8 @@ import {
   type CompanyProfile,
   type EarningsQuarter,
   type MarketDataProvider,
+  type SymbolMatch,
+  type SymbolQuote,
 } from '../contracts';
 
 const DAY_MS = 86_400_000;
@@ -155,6 +157,76 @@ export class YahooProvider implements MarketDataProvider {
       }
     }
     return [...symbols];
+  }
+
+  /**
+   * Autocomplete via Yahoo's search endpoint. Keeps only real quote entries
+   * (equities/ETFs with a symbol), drops news/lookups. Best-effort: any failure
+   * yields an empty list — the search box just shows nothing rather than error.
+   */
+  async search(query: string): Promise<SymbolMatch[]> {
+    const q = query.trim();
+    if (!q) return [];
+    try {
+      const res = await this.yf.search(q, { newsCount: 0, quotesCount: 10 });
+      const quotes = (res.quotes ?? []) as Array<{
+        symbol?: string;
+        shortname?: string;
+        longname?: string;
+        exchDisp?: string;
+        quoteType?: string;
+        isYahooFinance?: boolean;
+      }>;
+      const out: SymbolMatch[] = [];
+      for (const item of quotes) {
+        if (item.isYahooFinance === false) continue;
+        const symbol = str(item.symbol);
+        if (!symbol) continue;
+        const type = str(item.quoteType)?.toUpperCase() ?? null;
+        // Tradeable instruments only (skip currencies, indices, etc.).
+        if (type && !['EQUITY', 'ETF'].includes(type)) continue;
+        out.push({
+          symbol: symbol.toUpperCase(),
+          name: str(item.longname) ?? str(item.shortname),
+          exchange: str(item.exchDisp),
+          type,
+        });
+        if (out.length >= 8) break;
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Batch quote (one request for the whole list). Best-effort: on failure the
+   * followed list simply shows symbols without a price snapshot.
+   */
+  async getQuotes(symbols: string[]): Promise<SymbolQuote[]> {
+    if (symbols.length === 0) return [];
+    try {
+      const raw = await this.yf.quote(symbols);
+      const list = (Array.isArray(raw) ? raw : [raw]) as Array<{
+        symbol?: string;
+        shortName?: string;
+        longName?: string;
+        regularMarketPrice?: number;
+        regularMarketChangePercent?: number;
+        currency?: string;
+      }>;
+      return list
+        .filter((q) => str(q.symbol))
+        .map((q) => ({
+          symbol: (q.symbol as string).toUpperCase(),
+          name: str(q.longName) ?? str(q.shortName),
+          price: num(q.regularMarketPrice),
+          changePct: num(q.regularMarketChangePercent),
+          currency: str(q.currency),
+        }));
+    } catch {
+      return [];
+    }
   }
 
   async getProfile(symbol: string): Promise<CompanyProfile> {
