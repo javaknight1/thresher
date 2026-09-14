@@ -13,6 +13,7 @@ import type {
   CachedBars,
   MarketDataProvider,
 } from './contracts';
+import { upstashConfigured } from './upstash';
 import { WEB_CONFIG } from './config';
 
 /**
@@ -90,7 +91,7 @@ export class UpstashBarCache implements BarCache {
 
 /** Upstash when both env vars are configured, in-memory otherwise (zero-env fallback). */
 export function createBarCache(): BarCache {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (upstashConfigured()) {
     return new UpstashBarCache();
   }
   return new MemoryBarCache();

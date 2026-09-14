@@ -8,6 +8,7 @@
 import { Redis } from '@upstash/redis';
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse } from './api-types';
+import { upstashConfigured } from './upstash';
 
 /** Physical (Redis) TTL = logical TTL × this, so a stale board survives for
  *  serve-stale fallback (mirrors the bar cache). */
@@ -72,7 +73,7 @@ export class UpstashScanStore implements ScanStore {
 
 /** Upstash when both env vars are configured, in-memory otherwise. */
 export function createScanStore(): ScanStore {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (upstashConfigured()) {
     return new UpstashScanStore();
   }
   return new MemoryScanStore();

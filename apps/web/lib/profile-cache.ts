@@ -12,6 +12,7 @@ import type {
   ProfileWithFreshness,
 } from './contracts';
 import { PHYSICAL_TTL_FACTOR } from './cache';
+import { upstashConfigured } from './upstash';
 
 const MS_PER_SECOND = 1_000;
 
@@ -57,7 +58,7 @@ export class UpstashProfileCache implements ProfileCache {
 
 /** Upstash when both env vars are configured, in-memory otherwise. */
 export function createProfileCache(): ProfileCache {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (upstashConfigured()) {
     return new UpstashProfileCache();
   }
   return new MemoryProfileCache();

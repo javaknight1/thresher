@@ -6,6 +6,7 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import type { RateLimiter, RateLimitResult } from './contracts';
+import { upstashConfigured } from './upstash';
 import { WEB_CONFIG } from './config';
 
 /** Both limits in WEB_CONFIG.rateLimit are per hour (design §2.1). */
@@ -87,7 +88,7 @@ export class UpstashRateLimiter implements RateLimiter {
 
 /** Upstash when both env vars are configured, in-memory otherwise (zero-env fallback). */
 export function createRateLimiter(): RateLimiter {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (upstashConfigured()) {
     return new UpstashRateLimiter();
   }
   return new MemoryRateLimiter();
