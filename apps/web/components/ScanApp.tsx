@@ -10,9 +10,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
-import type { ScanResponse, ScanRow } from '../lib/api-types';
-import { WEB_CONFIG } from '../lib/config';
+import type { ScanResponse } from '../lib/api-types';
 import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
+import { TF_VIEWS, fetchBoardResilient, mergeTop } from '../lib/board-client';
 import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view';
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
@@ -32,8 +32,6 @@ type StaleNotice = 'stale' | 'rate-limited';
 function isAggregate(v: View): boolean {
   return v === 'top' || v === 'following';
 }
-
-const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
 /** A valid board view = 'top' | 'following' | one of the three timeframes. */
 function isView(v: string | null): v is View {
@@ -61,67 +59,6 @@ const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
   { key: 'rr', label: 'R:R' },
   { key: 'confidence', label: 'Agreement' },
 ];
-
-type BoardFetch = { board: ScanResponse | null; status: number };
-
-async function fetchBoard(tf: Timeframe, force: boolean): Promise<BoardFetch> {
-  try {
-    const res = await fetch(`/api/v1/scan?timeframe=${tf}${force ? '&refresh=1' : ''}`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) return { board: null, status: res.status };
-    return { board: (await res.json()) as ScanResponse, status: 200 };
-  } catch {
-    return { board: null, status: 0 };
-  }
-}
-
-/** Outcome of a resilient fetch: the board (if any) + why it might be stale. */
-type ResilientBoard = {
-  board: ScanResponse | null;
-  /** true when a forced refresh failed and we served the cached board instead */
-  fellBack: boolean;
-  /** true when the (forced) recompute was rate-limited / quota-capped */
-  rateLimited: boolean;
-};
-
-/**
- * Force a fresh board; if the recompute fails (a cold scan can 5xx/time out
- * under a burst, or hit the rate limit), fall back to the last cached (Upstash)
- * board so the Top view always has all three timeframes. Otherwise a dropped
- * timeframe changes the merge on every refresh — the "different results each
- * reload" bug. Reports whether it fell back / was rate-limited so the caller
- * can flag stale data.
- */
-async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ResilientBoard> {
-  const fresh = await fetchBoard(tf, force);
-  const rateLimited = fresh.status === 429;
-  if (fresh.board || !force) {
-    return { board: fresh.board, fellBack: false, rateLimited };
-  }
-  const cached = await fetchBoard(tf, false);
-  return { board: cached.board, fellBack: cached.board !== null, rateLimited };
-}
-
-function mergeTop(boards: ScanResponse[]): ScanResponse {
-  const ranked = boards
-    .flatMap((b) => b.rows.map((r) => ({ ...r, timeframe: b.timeframe })))
-    .sort((a, b) => b.score - a.score);
-  const bestBySymbol = new Map<string, ScanRow>();
-  for (const row of ranked) {
-    if (!bestBySymbol.has(row.symbol)) bestBySymbol.set(row.symbol, row);
-  }
-  const rows: ScanRow[] = [...bestBySymbol.values()].slice(0, WEB_CONFIG.scan.topN);
-  return {
-    timeframe: 'swing',
-    asOf: boards.reduce((latest, b) => (b.asOf > latest ? b.asOf : latest), boards[0].asOf),
-    universeSize: boards.reduce((s, b) => s + b.universeSize, 0),
-    emitted: boards.reduce((s, b) => s + b.emitted, 0),
-    refused: boards.reduce((s, b) => s + b.refused, 0),
-    skipped: boards.reduce((s, b) => s + b.skipped, 0),
-    rows,
-  };
-}
 
 function ScanView() {
   const router = useRouter();

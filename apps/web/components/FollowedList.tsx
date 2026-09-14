@@ -14,10 +14,10 @@ import type { Timeframe } from '@thresher/engine';
 import type { SymbolQuote } from '../lib/contracts';
 import type { ScanResponse, ScanRow } from '../lib/api-types';
 import { useFollows } from '../lib/follows-client';
+import { TF_VIEWS, fetchBoard, bestBySymbol } from '../lib/board-client';
 import Logo from './Logo';
 import styles from './FollowedList.module.css';
 
-const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 const TF_LABEL: Record<Timeframe, string> = {
   intraday: 'Hourly',
   swing: 'Daily',
@@ -57,24 +57,12 @@ export default function FollowedList() {
   // exact trade to show on each line. Boards are global, so fetch once.
   useEffect(() => {
     let cancelled = false;
-    Promise.all(
-      TIMEFRAMES.map((tf) =>
-        fetch(`/api/v1/scan?timeframe=${tf}`, { cache: 'no-store' })
-          .then((r) => (r.ok ? (r.json() as Promise<ScanResponse>) : null))
-          .catch(() => null),
-      ),
-    ).then((boards) => {
+    Promise.all(TF_VIEWS.map((tf) => fetchBoard(tf))).then((results) => {
       if (cancelled) return;
-      const map: Record<string, ScanRow> = {};
-      for (const b of boards) {
-        if (!b) continue;
-        for (const row of b.rows) {
-          const withTf: ScanRow = { ...row, timeframe: b.timeframe };
-          const cur = map[row.symbol];
-          if (!cur || row.score > cur.score) map[row.symbol] = withTf;
-        }
-      }
-      setSetups(map);
+      const boards = results
+        .map((r) => r.board)
+        .filter((b): b is ScanResponse => b !== null);
+      setSetups(Object.fromEntries(bestBySymbol(boards)));
     });
     return () => {
       cancelled = true;
