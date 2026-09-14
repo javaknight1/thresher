@@ -15,7 +15,7 @@ export const metadata = { title: 'Dashboard — Thresher' };
 
 const QUICK = [
   {
-    href: '/app',
+    href: '/leaderboard',
     title: 'Leaderboard',
     body: 'Today’s top setups across every candle size.',
     Icon: IconLeaderboard,

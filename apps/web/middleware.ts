@@ -8,7 +8,7 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
 const isProtected = createRouteMatcher([
-  '/app(.*)',
+  '/leaderboard(.*)',
   '/analyze(.*)',
   '/dashboard(.*)',
   '/api/v1/(.*)',
@@ -16,9 +16,9 @@ const isProtected = createRouteMatcher([
 
 const withClerk = clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
-  // Signed-in users at the landing page go straight to the board.
+  // Signed-in users at the landing page go straight to the leaderboard.
   if (userId && req.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/app', req.url));
+    return NextResponse.redirect(new URL('/leaderboard', req.url));
   }
   if (isProtected(req)) await auth.protect();
 });

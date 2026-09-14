@@ -8,7 +8,7 @@ import { authEnabled } from '../../../lib/auth';
 export const dynamic = 'force-dynamic';
 
 export default function SignInPage() {
-  if (!authEnabled()) redirect('/app');
+  if (!authEnabled()) redirect('/leaderboard');
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 16px' }}>
       <SignIn />

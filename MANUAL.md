@@ -76,7 +76,7 @@ When/if needed later:
 
 The code is wired and **conditional on the keys**: present → auth is enforced;
 absent → the app runs open (so local CI / e2e are unaffected). Landing page is at
-`/`, the app (Scan board) is at `/app`, and signed-in users are redirected `/` → `/app`.
+`/`, the leaderboard (Scan board) is at `/leaderboard`, and signed-in users are redirected `/` → `/leaderboard`.
 
 ### ☐ Local (Clerk **Development** instance)
 1. Clerk dashboard → **Development** instance → **API Keys** → copy `pk_test_…` and `sk_test_…`.
@@ -86,10 +86,10 @@ absent → the app runs open (so local CI / e2e are unaffected). Landing page is
    CLERK_SECRET_KEY=sk_test_…
    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-   NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/app
-   NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/app
+   NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/leaderboard
+   NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/leaderboard
    ```
-3. `pnpm --filter @thresher/web dev` → visit `/` → Get started → sign up a test user → land on `/app`.
+3. `pnpm --filter @thresher/web dev` → visit `/` → Get started → sign up a test user → land on `/leaderboard`.
 
 ### ☐ Production (Clerk **Production** instance, on Cloudflare)
 1. Clerk dashboard → **Production** instance → **Domains** → set app domain
@@ -101,7 +101,7 @@ absent → the app runs open (so local CI / e2e are unaffected). Landing page is
      = `pk_live_…`, plus the four `NEXT_PUBLIC_CLERK_*` URL vars above.
    - Encrypted runtime secret: `CLERK_SECRET_KEY` = `sk_live_…`.
 4. Push to `master` (triggers the build) → verify on `thresher.sharkfins.xyz`:
-   logged-out shows the landing, sign-in works, signed-in lands on `/app`.
+   logged-out shows the landing, sign-in works, signed-in lands on `/leaderboard`.
 
 > Per-user rate limits (userId instead of IP) land with Upstash — the shared
 > store is what makes them enforceable.

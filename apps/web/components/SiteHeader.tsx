@@ -3,7 +3,7 @@
 /**
  * Shared app header — a full-width bar with a fixed inner width, so it looks
  * identical on every page regardless of that page's content width. Icon+text
- * links to Dashboard, Leaderboard (/app), Search (/analyze), Brokerage, plus the
+ * links to Dashboard, Leaderboard (/leaderboard), Search (/analyze), Brokerage, plus the
  * profile menu. The current page's link is highlighted. A back button appears
  * only on the reference pages (/guide, /methodology).
  */
@@ -20,7 +20,7 @@ export interface SiteHeaderProps {
 
 const LINKS = [
   { href: '/dashboard', label: 'Dashboard', Icon: IconDashboard, testid: 'nav-dashboard' },
-  { href: '/app', label: 'Leaderboard', Icon: IconLeaderboard, testid: 'nav-leaderboard' },
+  { href: '/leaderboard', label: 'Leaderboard', Icon: IconLeaderboard, testid: 'nav-leaderboard' },
   { href: '/analyze', label: 'Search', Icon: IconSearch, testid: 'nav-search' },
   { href: '/brokerage', label: 'Brokerage', Icon: IconBrokerage, testid: 'nav-brokerage' },
 ] as const;
@@ -37,7 +37,7 @@ export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
               ← Back
             </button>
           )}
-          <Link href="/app" className={styles.wordmark}>
+          <Link href="/leaderboard" className={styles.wordmark}>
             {/* brand mark (same as the favicon) */}
             <img src="/icon.svg" alt="" className={styles.mark} width={20} height={20} />
             THRESHER

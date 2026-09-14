@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  */
 test.describe('scan board', () => {
   test('landing renders the board with counts and a ranked row', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
 
     const board = page.getByTestId('scan-board');
     await expect(board).toBeVisible({ timeout: 30_000 });
@@ -29,7 +29,7 @@ test.describe('scan board', () => {
       await route.continue();
     });
 
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await expect(page.getByTestId('scan-skeleton')).toBeVisible();
     // The real board replaces the skeleton once data arrives.
     await expect(page.getByTestId('scan-board')).toBeVisible({ timeout: 30_000 });
@@ -37,18 +37,18 @@ test.describe('scan board', () => {
   });
 
   test('clicking a row expands an inline detail drawer', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     const bias = page.getByTestId('scan-bias-MOCKLONG');
     await expect(bias).toBeVisible({ timeout: 30_000 });
 
     // Clicking the row (a non-link cell) expands the drawer, it does not navigate.
     await bias.click();
     await expect(page.getByTestId('scan-detail-MOCKLONG')).toBeVisible();
-    await expect(page).toHaveURL(/\/app(\?|$)/);
+    await expect(page).toHaveURL(/\/leaderboard(\?|$)/);
   });
 
   test('the symbol link and drawer link open the full Analyze view', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
     // The symbol is a link into the full per-symbol view.
@@ -61,7 +61,7 @@ test.describe('scan board', () => {
   });
 
   test('Top is the default view and aggregates candle sizes; tabs switch', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await expect(page.getByTestId('scan-tab-top')).toHaveAttribute('aria-pressed', 'true');
 
     const board = page.getByTestId('scan-board');
@@ -75,7 +75,7 @@ test.describe('scan board', () => {
   });
 
   test('the direction filter narrows the board', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
     // MOCKLONG is a long setup, so filtering to Shorts hides it.
@@ -87,7 +87,7 @@ test.describe('scan board', () => {
   });
 
   test('the selected tab persists across a reload via the URL', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await page.getByTestId('scan-tab-swing').click();
     await expect(page).toHaveURL(/[?&]tab=swing/);
 
@@ -96,7 +96,7 @@ test.describe('scan board', () => {
   });
 
   test('the header Search link navigates to the Analyze view', async ({ page }) => {
-    await page.goto('/app');
+    await page.goto('/leaderboard');
     await page.getByTestId('nav-search').click();
     await expect(page).toHaveURL(/\/analyze/);
     await expect(page.getByTestId('ticker-input')).toBeVisible();

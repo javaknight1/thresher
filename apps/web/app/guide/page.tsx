@@ -70,7 +70,7 @@ export default function GuidePage() {
           </Link>
           .
         </p>
-        <Link href="/app" className={styles.openBtnLarge}>
+        <Link href="/leaderboard" className={styles.openBtnLarge}>
           Open the board →
         </Link>
       </section>

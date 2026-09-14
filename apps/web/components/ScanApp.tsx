@@ -142,7 +142,7 @@ function ScanView() {
   const selectView = useCallback(
     (v: View) => {
       setView(v);
-      router.replace(v === 'top' ? '/app' : `/app?tab=${v}`, { scroll: false });
+      router.replace(v === 'top' ? '/leaderboard' : `/leaderboard?tab=${v}`, { scroll: false });
     },
     [router],
   );

@@ -27,7 +27,7 @@ test('the intro wizard opens, steps through, and closes', async ({ page }) => {
 });
 
 test('the shared footer (guide + methodology links) appears on the board', async ({ page }) => {
-  await page.goto('/app');
+  await page.goto('/leaderboard');
   await expect(page.getByTestId('scan-board')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('site-footer')).toBeVisible();
   await expect(page.getByTestId('footer-guide')).toBeVisible();

@@ -30,8 +30,8 @@ const VALUE_PROPS: ReadonlyArray<{ title: string; body: string }> = [
 
 export default function Landing() {
   const authed = authEnabled();
-  const startHref = authed ? '/sign-up' : '/app';
-  const signInHref = authed ? '/sign-in' : '/app';
+  const startHref = authed ? '/sign-up' : '/leaderboard';
+  const signInHref = authed ? '/sign-in' : '/leaderboard';
 
   return (
     <div className={styles.page}>

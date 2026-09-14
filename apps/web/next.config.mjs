@@ -14,6 +14,11 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
   },
+  // The board moved /app → /leaderboard; keep old bookmarks (and any stale Clerk
+  // redirect URLs) working. Query strings (e.g. ?tab=) are preserved.
+  async redirects() {
+    return [{ source: '/app', destination: '/leaderboard', permanent: true }];
+  },
 };
 
 // Lets `next dev` access Cloudflare bindings locally (no-op when none are bound).
