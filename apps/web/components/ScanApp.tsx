@@ -18,9 +18,13 @@ import ScanBoard from './ScanBoard';
 import SiteHeader from './SiteHeader';
 import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
+import DataAlert from './DataAlert';
+import { ScanBoardSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
 
 type View = 'top' | Timeframe;
+/** Why the board might be behind (drives the top DataAlert); null = fresh. */
+type StaleNotice = 'stale' | 'rate-limited';
 type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
 
 const ERROR_TITLES: Record<ErrorState['code'], string> = {
@@ -61,28 +65,45 @@ const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
   { key: 'confidence', label: 'Agreement' },
 ];
 
-async function fetchBoard(tf: Timeframe, force: boolean): Promise<ScanResponse | null> {
+type BoardFetch = { board: ScanResponse | null; status: number };
+
+async function fetchBoard(tf: Timeframe, force: boolean): Promise<BoardFetch> {
   try {
     const res = await fetch(`/api/v1/scan?timeframe=${tf}${force ? '&refresh=1' : ''}`, {
       cache: 'no-store',
     });
-    if (!res.ok) return null;
-    return (await res.json()) as ScanResponse;
+    if (!res.ok) return { board: null, status: res.status };
+    return { board: (await res.json()) as ScanResponse, status: 200 };
   } catch {
-    return null;
+    return { board: null, status: 0 };
   }
 }
 
+/** Outcome of a resilient fetch: the board (if any) + why it might be stale. */
+type ResilientBoard = {
+  board: ScanResponse | null;
+  /** true when a forced refresh failed and we served the cached board instead */
+  fellBack: boolean;
+  /** true when the (forced) recompute was rate-limited / quota-capped */
+  rateLimited: boolean;
+};
+
 /**
  * Force a fresh board; if the recompute fails (a cold scan can 5xx/time out
- * under a burst), fall back to the last cached (Upstash) board so the Top view
- * always has all three timeframes. Otherwise a dropped timeframe changes the
- * merge on every refresh — the "different results each reload" bug.
+ * under a burst, or hit the rate limit), fall back to the last cached (Upstash)
+ * board so the Top view always has all three timeframes. Otherwise a dropped
+ * timeframe changes the merge on every refresh — the "different results each
+ * reload" bug. Reports whether it fell back / was rate-limited so the caller
+ * can flag stale data.
  */
-async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ScanResponse | null> {
+async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ResilientBoard> {
   const fresh = await fetchBoard(tf, force);
-  if (fresh || !force) return fresh;
-  return fetchBoard(tf, false);
+  const rateLimited = fresh.status === 429;
+  if (fresh.board || !force) {
+    return { board: fresh.board, fellBack: false, rateLimited };
+  }
+  const cached = await fetchBoard(tf, false);
+  return { board: cached.board, fellBack: cached.board !== null, rateLimited };
 }
 
 function mergeTop(boards: ScanResponse[]): ScanResponse {
@@ -121,6 +142,7 @@ function ScanView() {
   );
   const [board, setBoard] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
+  const [staleNotice, setStaleNotice] = useState<StaleNotice | null>(null);
   const [loading, setLoading] = useState(false);
   const [direction, setDirection] = useState<DirectionFilter>('all');
   const [minRR, setMinRR] = useState<number>(0);
@@ -129,32 +151,31 @@ function ScanView() {
   const loadBoard = useCallback(async (v: View, force = false) => {
     setLoading(true);
     setError(null);
+    setStaleNotice(null);
+    // A fresh view load shows the skeleton instead of the previous tab's rows.
+    // A forced refresh keeps the current board visible (no blanking flash).
+    if (!force) setBoard(null);
     try {
-      if (v === 'top') {
-        const boards = (
-          await Promise.all(TF_VIEWS.map((tf) => fetchBoardResilient(tf, force)))
-        ).filter((b): b is ScanResponse => b !== null);
-        if (boards.length === 0) {
-          setBoard(null);
-          setError({ code: 'NETWORK', message: 'Could not reach the scan service.' });
-          return;
-        }
-        setBoard(mergeTop(boards));
-        return;
-      }
-      const res = await fetch(`/api/v1/scan?timeframe=${v}${force ? '&refresh=1' : ''}`, {
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as ApiError | null;
+      const views: readonly Timeframe[] = v === 'top' ? TF_VIEWS : [v];
+      const results = await Promise.all(views.map((tf) => fetchBoardResilient(tf, force)));
+      const boards = results.map((r) => r.board).filter((b): b is ScanResponse => b !== null);
+
+      if (boards.length === 0) {
         setBoard(null);
+        const rateLimited = results.some((r) => r.rateLimited);
         setError({
-          code: body?.error ?? 'NETWORK',
-          message: body?.message ?? `Request failed (${res.status})`,
+          code: rateLimited ? 'RATE_LIMITED' : 'NETWORK',
+          message: rateLimited
+            ? 'You’ve hit the scan limit — try again shortly.'
+            : 'Could not reach the scan service.',
         });
         return;
       }
-      setBoard((await res.json()) as ScanResponse);
+
+      setBoard(v === 'top' ? mergeTop(boards) : boards[0]);
+      // Flag if we couldn't get fresh data but showed something anyway.
+      if (results.some((r) => r.rateLimited)) setStaleNotice('rate-limited');
+      else if (results.some((r) => r.fellBack)) setStaleNotice('stale');
     } catch {
       setBoard(null);
       setError({ code: 'NETWORK', message: 'Could not reach the scan service.' });
@@ -199,6 +220,18 @@ function ScanView() {
         <div className={styles.topNote}>
           The best setups across all three candle sizes, ranked together — your morning shortlist.
         </div>
+      )}
+
+      {/* Couldn't get a fresh scan, but showed the cached board — flag it up top. */}
+      {staleNotice && board && !error && (
+        <DataAlert
+          variant={staleNotice === 'rate-limited' ? 'rate-limited' : 'stale'}
+          message={
+            staleNotice === 'rate-limited'
+              ? 'You’ve hit the scan limit, so this shows the most recent cached board rather than a fresh scan.'
+              : 'A fresh scan wasn’t available, so this shows the most recent cached board.'
+          }
+        />
       )}
 
       {/* Filter / sort bar */}
@@ -266,11 +299,9 @@ function ScanView() {
         </div>
       )}
 
-      {loading && (
-        <div data-testid="scan-loading" className={styles.loading}>
-          Scanning the tape…
-        </div>
-      )}
+      {/* Waiting on the scan with nothing cached to show yet → skeleton. A
+          forced refresh keeps the existing board visible instead. */}
+      {loading && !board && !error && <ScanBoardSkeleton />}
 
       {error && !loading && (
         <div role="alert" data-testid="error-banner" className={styles.error}>
@@ -279,7 +310,7 @@ function ScanView() {
         </div>
       )}
 
-      {displayed && !loading && !error && (
+      {displayed && !error && (
         <ScanBoard board={displayed} showTimeframe={view === 'top'} />
       )}
 

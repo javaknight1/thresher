@@ -1,0 +1,145 @@
+/* Shimmer primitive. Base/highlight derive from the existing theme tokens, so
+   the skeletons flip with light/dark automatically. */
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--panel2, var(--panel)) 25%,
+    var(--border) 37%,
+    var(--panel2, var(--panel)) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* ---- Scan board table placeholder ---- */
+.board {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 28px 1.4fr 1fr 1fr 1fr 0.8fr 24px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.cellRank {
+  width: 18px;
+}
+.cellSymbol {
+  width: 70%;
+}
+.cell {
+  width: 80%;
+}
+.cellScore {
+  width: 50%;
+}
+.cellCaret {
+  width: 12px;
+}
+
+/* ---- Analyze view placeholder ---- */
+.analyze {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+}
+
+.card {
+  height: 210px;
+  border-radius: 12px;
+}
+.side {
+  height: 210px;
+  border-radius: 12px;
+}
+.chart {
+  height: 260px;
+  border-radius: 12px;
+}
+.story {
+  height: 96px;
+  border-radius: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.gridCell {
+  height: 88px;
+  border-radius: 10px;
+}
+
+/* ---- Company panel placeholder ---- */
+.profile {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profileHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.profileTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.profileStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .cardRow {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    grid-template-columns: 24px 1.4fr 1fr 0.8fr 20px;
+  }
+  .row .cell:nth-child(4),
+  .row .cell:nth-child(5) {
+    display: none;
+  }
+}

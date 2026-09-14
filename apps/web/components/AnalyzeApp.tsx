@@ -26,7 +26,15 @@ import CompanyPanel from './CompanyPanel';
 import TooNew from './TooNew';
 import SiteHeader from './SiteHeader';
 import Footer from './Footer';
+import DataAlert from './DataAlert';
+import { AnalyzeSkeleton, ProfileSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
+
+/** Human-readable "as of" for the stale-data banner. */
+function formatFreshness(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+}
 
 const PriceChart = dynamic(() => import('./PriceChart'), { ssr: false });
 
@@ -117,6 +125,9 @@ export default function AnalyzeApp() {
     (symbol: string, tf: Timeframe) => {
       setActiveSymbol(symbol);
       setTimeframe(tf);
+      // Clear the prior symbol's result so the skeleton shows for the new one
+      // (a timeframe switch keeps its data — see onTimeframe — so no flash).
+      setData(null);
       void loadAnalysis(symbol, tf);
       void loadProfile(symbol);
     },
@@ -172,6 +183,18 @@ export default function AnalyzeApp() {
         </div>
       )}
 
+      {/* Couldn't get fresh bars, but served the last ones — flag it, keep the
+          plan visible below. */}
+      {data && !error && data.stale && (
+        <DataAlert
+          variant="stale"
+          message={`Live market data was unavailable, so this reflects the most recent data we have (as of ${formatFreshness(data.dataFreshness)}).`}
+        />
+      )}
+
+      {/* Waiting on the analyze request with nothing to show yet → skeleton. */}
+      {loading && !data && !error && <AnalyzeSkeleton />}
+
       {/* Too-new is a first-class partial result: no trade plan, but the chart
           still renders, and the company panel below shows the rest. */}
       {data && !error && isTooNew(data) && (
@@ -201,6 +224,7 @@ export default function AnalyzeApp() {
       {/* Company context loads independently of the trade plan, so it shows even
           when the engine can't run (e.g. a brand-new listing). */}
       {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
+      {!profile && !profileFailed && activeSymbol && <ProfileSkeleton />}
       {!profile && profileFailed && activeSymbol && (
         <div data-testid="profile-error" className={styles.profileError}>
           Couldn’t load company details for {activeSymbol}.{' '}

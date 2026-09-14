@@ -21,6 +21,21 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('disclaimer')).toBeVisible();
   });
 
+  test('shows a skeleton loader while the board is fetching', async ({ page }) => {
+    // Delay the scan responses so the skeleton is reliably observable, then
+    // let them through so the real board replaces it.
+    await page.route('**/api/v1/scan**', async (route) => {
+      await new Promise((r) => setTimeout(r, 600));
+      await route.continue();
+    });
+
+    await page.goto('/app');
+    await expect(page.getByTestId('scan-skeleton')).toBeVisible();
+    // The real board replaces the skeleton once data arrives.
+    await expect(page.getByTestId('scan-board')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('scan-skeleton')).toHaveCount(0);
+  });
+
   test('clicking a row expands an inline detail drawer', async ({ page }) => {
     await page.goto('/app');
     const bias = page.getByTestId('scan-bias-MOCKLONG');
