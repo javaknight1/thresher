@@ -21,13 +21,15 @@ test('follow from Analyze, see it under Following + the dashboard watchlist, the
   await expect(btn).toHaveAttribute('aria-pressed', 'true');
 
   // Following board tab.
-  await page.goto('/app?tab=following');
+  await page.goto('/leaderboard?tab=following');
   await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
 
   // Dashboard watchlist (leaderboard-style list) + unfollow.
   await page.goto('/dashboard');
   await expect(page.getByTestId('dashboard-follows')).toBeVisible();
   await expect(page.getByTestId('followed-row-MOCKLONG')).toBeVisible({ timeout: 30_000 });
+  // The exact trade shows on the line (MOCKLONG emits a LONG on Daily).
+  await expect(page.getByTestId('trade-MOCKLONG')).toContainText('Entry', { timeout: 30_000 });
   await page.getByTestId('followed-unfollow-MOCKLONG').click();
   await expect(page.getByTestId('followed-row-MOCKLONG')).toHaveCount(0);
 });
