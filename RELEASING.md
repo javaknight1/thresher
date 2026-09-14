@@ -45,7 +45,7 @@ A **release = bump the version + push a `v*` tag + publish the GitHub Release**.
 | **MINOR** `0.x.0` | new features (breaking OK pre-1.0) | `0.1.0 → 0.2.0` |
 | **MAJOR** `1.0.0` | GA — only when we leave beta | — |
 
-**`origin/master` is `0.6.0`**. The next batch ships as `0.6.1` (fixes) or
+**`origin/master` is `0.6.1`**. The next batch ships as `0.6.2` (fixes) or
 `0.7.0` (features).
 
 ## Cutting a release
