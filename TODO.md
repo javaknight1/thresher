@@ -62,3 +62,15 @@ review after M0 and M1.
 - [x] Universe guardrails: CONFIRMED 2026-06-10 — enforced at the API layer as 422 UNTRADEABLE_SYMBOL
 - [ ] Free-tier scan limit (5 symbols?) — decide at M2
 - [x] Intraday data quality: DECIDED 2026-06-10 — ship intraday in v1 with the visible data-freshness stamp; revisit with Polygon in v2
+
+### Deferred by the follow-driven model (decided 2026-09-14)
+
+We chose a demand-driven architecture: each user follows ≤20 stocks, the scan
+universe = the distinct union of all follows (cached once per symbol), and
+notifications start **in-app only**. These three items were consciously deferred
+out of that decision — build them after the follow model + in-app notifications
+ship.
+
+- [ ] **Discover / Top-movers board** — a global, non-personalized board (curated ∪ Yahoo movers) shown *alongside* each user's personalized "Following" board, so users can find hot stocks they don't already follow. Deferred when we chose the fully follow-driven model (no serendipitous discovery); revisit once follows land.
+- [ ] **Email notifications (Resend)** — email a follower when one of their followed stocks *newly* triggers a strong setup (transition-gated, batched, with a cooldown); also unlocks a morning digest. Deferred in favor of in-app-only notifications. Adds the Resend service (see `COSTS.md` → "services to consider").
+- [ ] **Mobile app** — a mobile client (PWA first, then native React Native/Expo if warranted) covering the board, Analyze, follows, and **push notifications** (which pair naturally with the follow model). Large effort; scope only after the web follow-model + notifications are proven.
