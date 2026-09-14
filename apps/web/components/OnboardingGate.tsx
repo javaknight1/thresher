@@ -11,6 +11,8 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { authEnabled } from '../lib/auth';
+import { seedDefaultFollows } from '../lib/follows-client';
+import { WEB_CONFIG } from '../lib/config';
 import OnboardingWizard from './OnboardingWizard';
 
 function OnboardingGateInner() {
@@ -27,6 +29,9 @@ function OnboardingGateInner() {
 
   const close = async () => {
     setOpen(false);
+    // Seed a starter watchlist so the new user's board isn't empty on day one
+    // (fully follow-driven — no default board otherwise). Best-effort.
+    void seedDefaultFollows(WEB_CONFIG.follows.defaultWatchlist);
     try {
       await user?.update({
         unsafeMetadata: { ...(user.unsafeMetadata ?? {}), onboardedAt: new Date().toISOString() },

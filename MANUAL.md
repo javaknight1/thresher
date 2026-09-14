@@ -125,9 +125,32 @@ job keeps those boards fresh via `GET /api/cron/scan?timeframe=…&key=CRON_SECR
 > Without `CRON_SECRET` the cron endpoint returns 503 and boards only refresh on
 > the ↻ Refresh button (or a cold cache) — still stable, just not auto-fresh.
 
-## Needed at M2 (do not set up yet — listed for planning)
+## ☐ Supabase (Postgres) — backs Follows
 
-### ☐ Supabase (Postgres) — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+Follows (each user's watchlist, which also drives the scan universe) persist in
+Supabase. **Optional**: without it the app uses an in-memory follow store — fine
+for local/CI, but per-isolate (not shared/persistent) in production. Turn it on
+when follows need to be durable and shared across isolates.
+
+1. Create a project at https://supabase.com.
+2. **Run the migration:** open the SQL editor and paste
+   `apps/web/supabase/migrations/0001_follows.sql` (creates the `follows` table +
+   indexes; idempotent, safe to re-run).
+3. **Keys** (Project → Settings → API): copy the **Project URL**, the **anon**
+   key, and the **service_role** key.
+4. **Local:** add to `apps/web/.env.local`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+   SUPABASE_SERVICE_ROLE_KEY=<service_role key>
+   ```
+5. **Production (Cloudflare):** `NEXT_PUBLIC_SUPABASE_URL` +
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` as **build** vars; `SUPABASE_SERVICE_ROLE_KEY`
+   as an encrypted **runtime** secret. The service-role key is server-only — it
+   bypasses RLS, so never expose it to the client.
+
+> Auth is Clerk, not Supabase Auth; the follow routes reach Postgres with the
+> service-role key server-side, so there is no RLS-by-user policy to configure.
 
 ---
 

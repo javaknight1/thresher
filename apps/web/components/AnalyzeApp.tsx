@@ -27,6 +27,7 @@ import TooNew from './TooNew';
 import SiteHeader from './SiteHeader';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
+import FollowButton from './FollowButton';
 import { AnalyzeSkeleton, ProfileSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
 
@@ -175,6 +176,15 @@ export default function AnalyzeApp() {
         loading={loading}
         freshness={data ? { dataFreshness: data.dataFreshness, stale: data.stale } : null}
       />
+
+      {activeSymbol && (
+        <div className={styles.followRow}>
+          <FollowButton symbol={activeSymbol} />
+          <span className={styles.followHint}>
+            Follow to keep {activeSymbol} on your board and its data warm.
+          </span>
+        </div>
+      )}
 
       {error && (
         <div role="alert" data-testid="error-banner" className={styles.error}>

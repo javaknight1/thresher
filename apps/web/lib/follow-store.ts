@@ -143,10 +143,22 @@ export class SupabaseFollowStore implements FollowStore {
   }
 }
 
+/**
+ * The in-memory store, cached on globalThis so it survives Next.js dev-mode
+ * module reloads (HMR re-evaluates modules and would otherwise reset a plain
+ * module-level singleton) and is shared across every route that reads follows
+ * (e.g. the scan universe). Harmless in production.
+ */
+function memoryFollowStore(): FollowStore {
+  const g = globalThis as typeof globalThis & { __thresherFollowStore__?: FollowStore };
+  g.__thresherFollowStore__ ??= new MemoryFollowStore();
+  return g.__thresherFollowStore__;
+}
+
 /** Supabase when configured (URL + service-role key), in-memory otherwise. */
 export function createFollowStore(): FollowStore {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (url && serviceKey) return new SupabaseFollowStore(url, serviceKey);
-  return new MemoryFollowStore();
+  return memoryFollowStore();
 }

@@ -92,6 +92,18 @@
   margin-top: -4px;
 }
 
+.followRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.followHint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .filterBar {
   display: flex;
   align-items: center;

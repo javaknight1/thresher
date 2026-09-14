@@ -73,6 +73,10 @@
   color: var(--muted);
 }
 
+.following {
+  margin-top: 4px;
+}
+
 .comingWrap {
   display: flex;
   flex-direction: column;

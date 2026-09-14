@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import SiteHeader from '../../components/SiteHeader';
 import Footer from '../../components/Footer';
+import FollowingManager from '../../components/FollowingManager';
 import { IconLeaderboard, IconSearch, IconBrokerage } from '../../components/icons';
 import styles from './dashboard.module.css';
 
@@ -33,9 +34,8 @@ const QUICK = [
 ];
 
 const COMING = [
-  { title: 'Watchlist', body: 'Scan your own symbols, not just the curated universe.' },
   { title: 'Recent analyses', body: 'Jump back to the tickers you’ve looked at.' },
-  { title: 'Alerts', body: 'Get notified when a watched name first triggers a setup.' },
+  { title: 'Alerts', body: 'Get notified when a followed name first triggers a setup.' },
   { title: 'Track record', body: 'Hit-rate by confidence bucket once outcomes are labeled.' },
 ];
 
@@ -60,6 +60,10 @@ export default function DashboardPage() {
             </div>
           </Link>
         ))}
+      </section>
+
+      <section className={styles.following}>
+        <FollowingManager />
       </section>
 
       <section className={styles.comingWrap}>

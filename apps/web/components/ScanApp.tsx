@@ -20,11 +20,16 @@ import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
 import { ScanBoardSkeleton } from './Skeleton';
+import { useFollows } from '../lib/follows-client';
 import styles from '../app/page.module.css';
 
-type View = 'top' | Timeframe;
+type View = 'top' | 'following' | Timeframe;
 /** Why the board might be behind (drives the top DataAlert); null = fresh. */
 type StaleNotice = 'stale' | 'rate-limited';
+/** The aggregate views merge all three candle sizes into one shortlist. */
+function isAggregate(v: View): boolean {
+  return v === 'top' || v === 'following';
+}
 type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
 
 const ERROR_TITLES: Record<ErrorState['code'], string> = {
@@ -39,13 +44,14 @@ const ERROR_TITLES: Record<ErrorState['code'], string> = {
 
 const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
-/** A valid board view = 'top' or one of the three timeframes. */
+/** A valid board view = 'top' | 'following' | one of the three timeframes. */
 function isView(v: string | null): v is View {
-  return v === 'top' || (TF_VIEWS as readonly string[]).includes(v ?? '');
+  return v === 'top' || v === 'following' || (TF_VIEWS as readonly string[]).includes(v ?? '');
 }
 
 const TABS: ReadonlyArray<{ key: View; label: string }> = [
   { key: 'top', label: 'Top' },
+  { key: 'following', label: 'Following' },
   { key: 'intraday', label: 'Hourly' },
   { key: 'swing', label: 'Daily' },
   { key: 'position', label: 'Weekly' },
@@ -156,7 +162,7 @@ function ScanView() {
     // A forced refresh keeps the current board visible (no blanking flash).
     if (!force) setBoard(null);
     try {
-      const views: readonly Timeframe[] = v === 'top' ? TF_VIEWS : [v];
+      const views: readonly Timeframe[] = isAggregate(v) ? TF_VIEWS : [v as Timeframe];
       const results = await Promise.all(views.map((tf) => fetchBoardResilient(tf, force)));
       const boards = results.map((r) => r.board).filter((b): b is ScanResponse => b !== null);
 
@@ -172,7 +178,7 @@ function ScanView() {
         return;
       }
 
-      setBoard(v === 'top' ? mergeTop(boards) : boards[0]);
+      setBoard(isAggregate(v) ? mergeTop(boards) : boards[0]);
       // Flag if we couldn't get fresh data but showed something anyway.
       if (results.some((r) => r.rateLimited)) setStaleNotice('rate-limited');
       else if (results.some((r) => r.fellBack)) setStaleNotice('stale');
@@ -188,14 +194,21 @@ function ScanView() {
     void loadBoard(view);
   }, [view, loadBoard]);
 
+  // The "Following" view narrows the aggregated board to the user's follows.
+  const { symbols: followed } = useFollows();
+
   // Filtered/sorted rows for display (scan-level counts stay as-is).
   const displayed = useMemo<ScanResponse | null>(() => {
     if (!board) return null;
-    return { ...board, rows: applyView(board.rows, { direction, minRR, minConfidence: 0, sort }) };
-  }, [board, direction, minRR, sort]);
+    const followedSet = new Set(followed);
+    const rows =
+      view === 'following' ? board.rows.filter((r) => followedSet.has(r.symbol)) : board.rows;
+    return { ...board, rows: applyView(rows, { direction, minRR, minConfidence: 0, sort }) };
+  }, [board, direction, minRR, sort, view, followed]);
 
-  // "market closed" hint applies to Hourly setups (and the Top view mixes them in).
-  const showClosedHint = (view === 'intraday' || view === 'top') && !isUsMarketOpen(new Date());
+  // "market closed" hint applies to Hourly setups (the aggregate views mix them in).
+  const showClosedHint =
+    (view === 'intraday' || isAggregate(view)) && !isUsMarketOpen(new Date());
 
   return (
     <>
@@ -219,6 +232,13 @@ function ScanView() {
       {view === 'top' && (
         <div className={styles.topNote}>
           The best setups across all three candle sizes, ranked together — your morning shortlist.
+        </div>
+      )}
+
+      {view === 'following' && (
+        <div className={styles.topNote}>
+          Setups from the symbols you follow, across every candle size. Search a ticker and tap
+          Follow to add one.
         </div>
       )}
 
@@ -310,8 +330,16 @@ function ScanView() {
         </div>
       )}
 
-      {displayed && !error && (
-        <ScanBoard board={displayed} showTimeframe={view === 'top'} />
+      {displayed && !error && view === 'following' && displayed.rows.length === 0 && !loading && (
+        <div className={styles.loading} data-testid="following-empty">
+          {followed.length === 0
+            ? 'You’re not following anything yet. Search a ticker and tap ☆ Follow to build your board.'
+            : 'None of your followed symbols have a qualifying setup right now.'}
+        </div>
+      )}
+
+      {displayed && !error && !(view === 'following' && displayed.rows.length === 0) && (
+        <ScanBoard board={displayed} showTimeframe={isAggregate(view)} />
       )}
 
         <Footer />
