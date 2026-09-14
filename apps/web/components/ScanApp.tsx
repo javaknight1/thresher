@@ -10,8 +10,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
-import type { ApiError, ScanResponse, ScanRow } from '../lib/api-types';
+import type { ScanResponse, ScanRow } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
+import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
 import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view';
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
@@ -31,17 +32,6 @@ type StaleNotice = 'stale' | 'rate-limited';
 function isAggregate(v: View): boolean {
   return v === 'top' || v === 'following';
 }
-type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
-
-const ERROR_TITLES: Record<ErrorState['code'], string> = {
-  INVALID_REQUEST: 'Check the request',
-  UNKNOWN_SYMBOL: 'Not found',
-  UNTRADEABLE_SYMBOL: 'Not tradeable',
-  INSUFFICIENT_HISTORY: 'Not enough history',
-  RATE_LIMITED: 'Too many scans',
-  DATA_UNAVAILABLE: 'Market data unavailable',
-  NETWORK: 'Can’t reach the service',
-};
 
 const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 

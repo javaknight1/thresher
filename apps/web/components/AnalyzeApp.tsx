@@ -17,6 +17,7 @@ import type {
   ProfileResponse,
 } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
+import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
 import Controls from './Controls';
 import TradeCard from './TradeCard';
 import TradeLadder from './TradeLadder';
@@ -40,8 +41,6 @@ function formatFreshness(iso: string): string {
 
 const PriceChart = dynamic(() => import('./PriceChart'), { ssr: false });
 
-type ErrorState = { code: ApiError['error'] | 'NETWORK'; message: string };
-
 /** The analyze route returns a full result or a partial "too new" one. */
 type AnalyzeData = AnalyzeResponse | InsufficientHistoryResponse;
 
@@ -54,17 +53,6 @@ const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 function isTimeframe(v: string | null): v is Timeframe {
   return v !== null && (TIMEFRAMES as readonly string[]).includes(v);
 }
-
-/** Plain-English headline per error code — raw codes are jargon to a trader. */
-const ERROR_TITLES: Record<ErrorState['code'], string> = {
-  INVALID_REQUEST: 'Check the ticker',
-  UNKNOWN_SYMBOL: 'Ticker not found',
-  UNTRADEABLE_SYMBOL: 'Too illiquid to analyze',
-  INSUFFICIENT_HISTORY: 'Too new for a full technical read',
-  RATE_LIMITED: 'Too many requests',
-  DATA_UNAVAILABLE: 'Market data unavailable',
-  NETWORK: 'Can’t reach the service',
-};
 
 export default function AnalyzeApp() {
   const searchParams = useSearchParams();
