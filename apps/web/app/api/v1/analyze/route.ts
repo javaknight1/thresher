@@ -15,6 +15,7 @@ import { createRateLimiter } from '../../../../lib/ratelimit';
 import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runAnalysis } from '../../../../lib/analyze-service';
+import { SYMBOL_PATTERN } from '../../../../lib/symbols';
 
 // Node runtime: yahoo-finance2 v3 ships only Deno-shimmed node builds (no
 // edge-safe entry), so this route cannot compile for the edge runtime. The
@@ -26,7 +27,6 @@ export const runtime = 'nodejs';
 const barCache = createBarCache();
 const rateLimiter = createRateLimiter();
 
-const SYMBOL_PATTERN = /^[A-Z][A-Z.-]{0,9}$/;
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 const MS_PER_SECOND = 1_000;
 

@@ -13,9 +13,8 @@ import type { ScanResponse, ScanRow } from './api-types';
 import type { BarCache, MarketDataProvider } from './contracts';
 import { runAnalysis } from './analyze-service';
 import { setupScore } from './setup-score';
+import { SYMBOL_PATTERN } from './symbols';
 import { WEB_CONFIG } from './config';
-
-const SYMBOL_PATTERN = /^[A-Z][A-Z.-]{0,9}$/;
 
 export interface RunScanInput {
   timeframe: Timeframe;

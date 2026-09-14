@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MemoryFollowStore, normalizeSymbol } from '../lib/follow-store';
+import { MemoryFollowStore } from '../lib/follow-store';
+import { normalizeSymbol } from '../lib/symbols';
 
 describe('normalizeSymbol', () => {
   it('uppercases and trims', () => {

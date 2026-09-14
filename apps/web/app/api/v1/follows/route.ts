@@ -16,7 +16,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { FollowsResponse } from '../../../../lib/api-types';
-import { createFollowStore, normalizeSymbol } from '../../../../lib/follow-store';
+import { createFollowStore } from '../../../../lib/follow-store';
+import { isValidSymbol, normalizeSymbol } from '../../../../lib/symbols';
 import { requestIdentity } from '../../../../lib/auth-server';
 import { authEnabled } from '../../../../lib/auth';
 import { WEB_CONFIG } from '../../../../lib/config';
@@ -25,7 +26,6 @@ export const runtime = 'nodejs';
 
 const store = createFollowStore();
 const MAX = WEB_CONFIG.follows.maxPerUser;
-const SYMBOL_PATTERN = /^[A-Z][A-Z.-]{0,9}$/;
 const HEADERS = { 'cache-control': 'no-store' } as const;
 
 /** Resolve the follow identity, or null when auth is on but the caller is anon. */
@@ -51,7 +51,7 @@ async function readSymbol(req: Request): Promise<string | null> {
   const body = (await req.json().catch(() => null)) as { symbol?: unknown } | null;
   if (!body || typeof body.symbol !== 'string') return null;
   const sym = normalizeSymbol(body.symbol);
-  return SYMBOL_PATTERN.test(sym) ? sym : null;
+  return isValidSymbol(sym) ? sym : null;
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {

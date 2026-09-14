@@ -14,6 +14,7 @@ import { createRateLimiter } from '../../../../lib/ratelimit';
 import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runProfile } from '../../../../lib/profile-service';
+import { SYMBOL_PATTERN } from '../../../../lib/symbols';
 
 // Node runtime: yahoo-finance2 has no edge-safe build (see analyze/route.ts).
 export const runtime = 'nodejs';
@@ -21,7 +22,6 @@ export const runtime = 'nodejs';
 const profileCache = createProfileCache();
 const rateLimiter = createRateLimiter();
 
-const SYMBOL_PATTERN = /^[A-Z][A-Z.-]{0,9}$/;
 const MS_PER_SECOND = 1_000;
 const BASE_HEADERS = { 'cache-control': 'no-store' } as const;
 

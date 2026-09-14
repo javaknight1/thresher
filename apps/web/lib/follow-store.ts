@@ -11,11 +11,7 @@
  * runs on the Cloudflare Workers runtime), authenticated with the service-role
  * key — these routes are server-only.
  */
-
-/** Normalize a raw ticker to the stored form (upper, trimmed). */
-export function normalizeSymbol(raw: string): string {
-  return raw.trim().toUpperCase();
-}
+import { normalizeSymbol } from './symbols';
 
 export interface FollowStore {
   /** symbols this user follows (stable order: most-recently-added last) */

@@ -8,7 +8,7 @@
  * the server response; a rejected write (e.g. the follow cap) reverts.
  */
 import { useCallback, useSyncExternalStore } from 'react';
-import { normalizeSymbol } from './follow-store';
+import { normalizeSymbol } from './symbols';
 
 export interface FollowsState {
   symbols: string[];
