@@ -12,9 +12,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Timeframe } from '@thresher/engine';
 import type { SymbolQuote } from '../lib/contracts';
-import type { ScanResponse, ScanRow } from '../lib/api-types';
+import type { ScanRow } from '../lib/api-types';
 import { useFollows } from '../lib/follows-client';
-import { TF_VIEWS, fetchBoard, bestBySymbol } from '../lib/board-client';
+import { fetchAllBoards, bestBySymbol } from '../lib/board-client';
 import Logo from './Logo';
 import styles from './FollowedList.module.css';
 
@@ -57,11 +57,8 @@ export default function FollowedList() {
   // exact trade to show on each line. Boards are global, so fetch once.
   useEffect(() => {
     let cancelled = false;
-    Promise.all(TF_VIEWS.map((tf) => fetchBoard(tf))).then((results) => {
+    fetchAllBoards().then((boards) => {
       if (cancelled) return;
-      const boards = results
-        .map((r) => r.board)
-        .filter((b): b is ScanResponse => b !== null);
       setSetups(Object.fromEntries(bestBySymbol(boards)));
     });
     return () => {

@@ -26,6 +26,22 @@ export async function fetchBoard(tf: Timeframe, force = false): Promise<BoardFet
   }
 }
 
+/**
+ * Read-only snapshot of all cached boards in one request (GET /api/v1/boards).
+ * For consumers that only need a read (e.g. the watchlist trade lines) — cheaper
+ * than three per-timeframe fetches. Returns [] on failure or a cold cache.
+ */
+export async function fetchAllBoards(): Promise<ScanResponse[]> {
+  try {
+    const res = await fetch('/api/v1/boards', { cache: 'no-store' });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { boards?: ScanResponse[] };
+    return body.boards ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Outcome of a resilient fetch: the board (if any) + why it might be stale. */
 export type ResilientBoard = {
   board: ScanResponse | null;
