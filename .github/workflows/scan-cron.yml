@@ -1,42 +1,51 @@
 name: Refresh scan boards
 
-# Precompute the Top-board scans on a schedule so page reads serve warm boards
-# (the app reads from Upstash; only this job recomputes). US regular hours are
-# ~13:30–20:00 UTC (09:30–16:00 ET), Mon–Fri. Also runnable on demand.
+# Precompute each timeframe's board on a schedule so page reads serve warm
+# boards (the app reads from Upstash; only this job recomputes). US regular
+# hours are ~13:30–20:00 UTC (09:30–16:00 ET), Mon–Fri. Also runnable on demand.
 on:
   schedule:
     - cron: '*/30 13-20 * * 1-5'
   workflow_dispatch: {}
 
-# Don't pile up runs if one is slow.
+# One workflow run at a time; don't pile up if a run is slow.
 concurrency:
   group: scan-cron
   cancel-in-progress: false
 
 jobs:
   refresh:
+    # One job per candle size, so each shows its own pass/fail + error body, and
+    # one timeframe failing never hides the others (fail-fast: false).
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        timeframe: [intraday, swing, position]
+    name: refresh (${{ matrix.timeframe }})
     steps:
-      - name: Recompute each timeframe board
+      - name: Refresh the ${{ matrix.timeframe }} board
         env:
           BASE_URL: https://thresher.sharkfins.xyz
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          TF: ${{ matrix.timeframe }}
         run: |
-          if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET not set — add it as a repo secret"; exit 1; fi
-          fail=0
-          for tf in intraday swing position; do
-            # Capture the response body AND the status so a failure shows the cause,
-            # not just the HTTP code. The endpoint returns JSON { ok, stage, error, hint }.
-            body=$(mktemp)
-            code=$(curl -s -o "$body" -w "%{http_code}" --max-time 120 \
-              "$BASE_URL/api/cron/scan?timeframe=$tf&key=$CRON_SECRET")
-            if [ "$code" = "200" ]; then
-              echo "✓ $tf -> HTTP 200 :: $(cat "$body")"
-            else
-              echo "::error title=cron $tf failed (HTTP $code)::$(cat "$body")"
-              echo "✗ $tf -> HTTP $code :: $(cat "$body")"
-              fail=1
-            fi
-            rm -f "$body"
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET not set — add it as a repo secret"; exit 1
+          fi
+          body=$(mktemp)
+          code=000
+          # One retry: a cold scan can time out on the first hit.
+          for attempt in 1 2; do
+            code=$(curl -s -o "$body" -w "%{http_code}" --max-time 150 \
+              "$BASE_URL/api/cron/scan?timeframe=$TF&key=$CRON_SECRET")
+            [ "$code" = "200" ] && break
+            echo "attempt $attempt: $TF -> HTTP $code :: $(cat "$body")"
+            [ "$attempt" = "1" ] && sleep 10
           done
-          exit $fail
+          if [ "$code" = "200" ]; then
+            echo "✓ $TF -> HTTP 200 :: $(cat "$body")"
+          else
+            echo "::error title=cron $TF failed (HTTP $code)::$(cat "$body")"
+            exit 1
+          fi

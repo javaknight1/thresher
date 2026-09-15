@@ -1,0 +1,30 @@
+name: CI
+
+# The quality gate (typecheck + lint + unit tests) on every push to master and
+# on PRs, so a broken commit is caught before it deploys. Mirrors the local
+# `pnpm typecheck && pnpm lint && pnpm test` (CLAUDE.md). Playwright e2e is not
+# run here (it needs a browser + dev server) — run it locally / add a separate
+# job later if desired.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # reads packageManager from package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test

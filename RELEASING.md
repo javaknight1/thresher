@@ -89,8 +89,10 @@ sibling project's v0.2.0 step), add:
 - [ ] **`scripts/gh-release.sh`** — build the release notes from user-facing
   commit subjects since the previous tag (the filter above), so `gh release`
   isn't hand-assembled.
-- [ ] **GitHub Actions:** CI (typecheck + lint + test) on every push to
-  `master`; a `v*`-tag workflow that publishes the GitHub Release.
+- [x] **CI** (`.github/workflows/ci.yml`) — typecheck + lint + unit tests on
+  every push to `master` and on PRs.
+- [ ] **Release workflow:** a `v*`-tag workflow that publishes the GitHub
+  Release (notes = user-facing commit subjects since the previous tag).
 - [ ] **Decide deploy gating:** either keep Cloudflare auto-deploy on `master`
   (tags stay pure markers) or gate production on tags. If we gate, document it
   here and flip the Cloudflare build trigger.
