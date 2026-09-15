@@ -84,7 +84,7 @@ export const WEB_CONFIG = {
    * with `defaultWatchlist` so their board isn't empty on day one.
    */
   follows: {
-    maxPerUser: 20,
-    defaultWatchlist: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD', 'COIN'],
+    maxPerUser: 5,
+    defaultWatchlist: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD'],
   },
 } as const;

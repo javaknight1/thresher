@@ -45,7 +45,7 @@ review after M0 and M1.
 - [ ] Clerk auth (anonymous tier preserved), Supabase schema: `watchlists`, `saved_analyses`, `emitted_setups` (records every plan with engineVersion/configHash from day one)
 - [ ] `POST /api/v1/scan` (≤50 symbols, authed, session-cached) + Scan page (§6.3): quality rank `(C/100)×RR`, refusal collapse count
 - [ ] Save/load analyses; watchlist CRUD
-- [x] **Follows (demand-driven universe)** — v0.3.0: `FollowStore` (Supabase-over-PostgREST + in-memory), `/api/v1/follows` (cap 20, Clerk-gated), follows feed `buildUniverse`, ★ toggle on Analyze + "Following" board tab + dashboard manager, default-watchlist seeding on onboarding.
+- [x] **Follows (demand-driven universe)** — v0.3.0: `FollowStore` (Supabase-over-PostgREST + in-memory), `/api/v1/follows` (cap `WEB_CONFIG.follows.maxPerUser`, Clerk-gated), follows feed `buildUniverse`, ★ toggle on Analyze + "Following" board tab + dashboard manager, default-watchlist seeding on onboarding.
 - [ ] **In-app follow notifications** — notify a follower when a followed symbol *first* triggers a strong setup: `NotificationStore` + signal-transition detection in the cron + a header bell/feed. Deferred from v0.3.0 (depends on Supabase being live **and** a reliably-running cron — currently 500-prone on the CF free tier).
 
 ## M3 — Honesty board
