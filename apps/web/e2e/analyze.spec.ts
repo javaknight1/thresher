@@ -39,6 +39,11 @@ test.describe('analyze url + share', () => {
     await expect(page.getByTestId('share-link')).toBeVisible();
   });
 
+  test('shared Analyze links get a per-symbol title (rich link preview)', async ({ page }) => {
+    await page.goto('/analyze?symbol=MOCKLONG&timeframe=swing');
+    await expect(page).toHaveTitle(/MOCKLONG.*Daily setup/);
+  });
+
   test('position sizer computes shares from account size + risk', async ({ page }) => {
     await page.goto('/analyze?symbol=MOCKLONG&timeframe=swing');
     const sizer = page.getByTestId('position-sizer');
