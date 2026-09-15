@@ -38,6 +38,16 @@ test.describe('analyze url + share', () => {
     // The share/copy-link button is present.
     await expect(page.getByTestId('share-link')).toBeVisible();
   });
+
+  test('position sizer computes shares from account size + risk', async ({ page }) => {
+    await page.goto('/analyze?symbol=MOCKLONG&timeframe=swing');
+    const sizer = page.getByTestId('position-sizer');
+    await expect(sizer).toBeVisible({ timeout: 30_000 });
+
+    await page.getByTestId('ps-account').fill('10000');
+    await expect(page.getByTestId('ps-result')).toBeVisible();
+    await expect(page.getByTestId('ps-shares')).not.toHaveText('0');
+  });
 });
 
 test.describe('analyze smoke', () => {

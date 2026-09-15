@@ -30,6 +30,7 @@ import Footer from './Footer';
 import DataAlert from './DataAlert';
 import FollowButton from './FollowButton';
 import ShareButton from './ShareButton';
+import PositionSizer from './PositionSizer';
 import PageHero from './PageHero';
 import { AnalyzeSkeleton, ProfileSkeleton } from './Skeleton';
 import styles from '../app/page.module.css';
@@ -250,6 +251,7 @@ export default function AnalyzeApp() {
             <TradeCard data={data} />
             <TradeLadder data={data} />
           </div>
+          {data.plan && <PositionSizer entry={data.plan.entry} stop={data.plan.stop} />}
           <PriceChart
             chart={data.chart}
             plan={data.plan}
