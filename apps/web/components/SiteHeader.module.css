@@ -100,3 +100,33 @@
     gap: 14px;
   }
 }
+
+.cmdk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cmdk:hover {
+  color: var(--text);
+  border-color: var(--amber);
+}
+
+.cmdkKey {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@media (max-width: 680px) {
+  .cmdkKey {
+    display: none;
+  }
+}

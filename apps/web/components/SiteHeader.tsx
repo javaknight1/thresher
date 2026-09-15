@@ -10,8 +10,13 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AuthNav from './AuthNav';
+import CommandPalette from './CommandPalette';
 import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage } from './icons';
 import styles from './SiteHeader.module.css';
+
+function openPalette() {
+  window.dispatchEvent(new Event('thresher:command-palette'));
+}
 
 export interface SiteHeaderProps {
   /** show a Back button (reference pages only) */
@@ -60,9 +65,21 @@ export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
               </Link>
             );
           })}
+          <button
+            type="button"
+            className={styles.cmdk}
+            onClick={openPalette}
+            data-testid="cmdk-open"
+            aria-label="Open command palette"
+            title="Search — ⌘K"
+          >
+            <IconSearch className={styles.icon} />
+            <span className={styles.cmdkKey}>⌘K</span>
+          </button>
           <AuthNav />
         </nav>
       </div>
+      <CommandPalette />
     </header>
   );
 }
