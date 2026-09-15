@@ -86,13 +86,23 @@ test.describe('scan board', () => {
     await expect(page.getByTestId('scan-row-MOCKLONG')).toBeVisible();
   });
 
-  test('the selected tab persists across a reload via the URL', async ({ page }) => {
+  test('tab + filters persist across a reload via the URL, and are shareable', async ({ page }) => {
     await page.goto('/leaderboard');
-    await page.getByTestId('scan-tab-swing').click();
-    await expect(page).toHaveURL(/[?&]tab=swing/);
+    await expect(page.getByTestId('scan-board')).toBeVisible({ timeout: 30_000 });
 
+    // Tab + a filter both write to the URL.
+    await page.getByTestId('scan-tab-swing').click();
+    await page.getByTestId('filter-long').click();
+    await expect(page).toHaveURL(/[?&]tab=swing/);
+    await expect(page).toHaveURL(/[?&]dir=long/);
+
+    // Reload restores both from the URL.
     await page.reload();
     await expect(page.getByTestId('scan-tab-swing')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('filter-long')).toHaveAttribute('aria-pressed', 'true');
+
+    // Share button is present on the board.
+    await expect(page.getByTestId('share-link')).toBeVisible();
   });
 
   test('the header Search link navigates to the Analyze view', async ({ page }) => {

@@ -20,6 +20,7 @@ import SiteHeader from './SiteHeader';
 import OnboardingGate from './OnboardingGate';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
+import ShareButton from './ShareButton';
 import PageHero from './PageHero';
 import { ScanBoardSkeleton } from './Skeleton';
 import { useFollows } from '../lib/follows-client';
@@ -60,27 +61,56 @@ const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
   { key: 'confidence', label: 'Agreement' },
 ];
 
+function isDirection(v: string | null): v is DirectionFilter {
+  return v === 'all' || v === 'long' || v === 'short';
+}
+function isSort(v: string | null): v is SortKey {
+  return v === 'score' || v === 'quality' || v === 'rr' || v === 'confidence';
+}
+
+/** Build a shareable/reload-stable board URL; defaults are omitted for clean URLs. */
+function boardUrl(view: View, direction: DirectionFilter, minRR: number, sort: SortKey): string {
+  const p = new URLSearchParams();
+  if (view !== 'top') p.set('tab', view);
+  if (direction !== 'all') p.set('dir', direction);
+  if (minRR > 0) p.set('minrr', String(minRR));
+  if (sort !== 'score') p.set('sort', sort);
+  const qs = p.toString();
+  return qs ? `/leaderboard?${qs}` : '/leaderboard';
+}
+
 function ScanView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Persist the selected tab in the URL (?tab=) so a browser refresh keeps the
-  // view instead of snapping back to Top, and the board is shareable.
-  const tabParam = searchParams.get('tab');
-  const [view, setView] = useState<View>(isView(tabParam) ? tabParam : 'top');
-  const selectView = useCallback(
-    (v: View) => {
-      setView(v);
-      router.replace(v === 'top' ? '/leaderboard' : `/leaderboard?tab=${v}`, { scroll: false });
-    },
-    [router],
-  );
+  // View + filters are all URL params (?tab=&dir=&minrr=&sort=) so a board view
+  // survives reload and is shareable.
+  const [view, setView] = useState<View>(() => {
+    const t = searchParams.get('tab');
+    return isView(t) ? t : 'top';
+  });
   const [board, setBoard] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
   const [staleNotice, setStaleNotice] = useState<StaleNotice | null>(null);
   const [loading, setLoading] = useState(false);
-  const [direction, setDirection] = useState<DirectionFilter>('all');
-  const [minRR, setMinRR] = useState<number>(0);
-  const [sort, setSort] = useState<SortKey>('score');
+  const [direction, setDirection] = useState<DirectionFilter>(() => {
+    const d = searchParams.get('dir');
+    return isDirection(d) ? d : 'all';
+  });
+  const [minRR, setMinRR] = useState<number>(() => {
+    const m = Number(searchParams.get('minrr'));
+    return (RR_FLOORS as readonly number[]).includes(m) ? m : 0;
+  });
+  const [sort, setSort] = useState<SortKey>(() => {
+    const s = searchParams.get('sort');
+    return isSort(s) ? s : 'score';
+  });
+
+  const selectView = useCallback((v: View) => setView(v), []);
+
+  // Reflect view + filters in the URL (shareable, reload-stable).
+  useEffect(() => {
+    router.replace(boardUrl(view, direction, minRR, sort), { scroll: false });
+  }, [view, direction, minRR, sort, router]);
 
   const loadBoard = useCallback(async (v: View, force = false) => {
     setLoading(true);
@@ -244,6 +274,7 @@ function ScanView() {
         >
           ↻ Refresh
         </button>
+        <ShareButton label="Share view" />
       </div>
 
       {showClosedHint && (
