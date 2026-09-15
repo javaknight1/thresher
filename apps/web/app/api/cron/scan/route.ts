@@ -40,11 +40,58 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const timeframe = rawTimeframe as Timeframe;
 
-  const followed = await followStore.allSymbols().catch(() => []);
-  const board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
-  await boardStore.set(timeframe, board, WEB_CONFIG.cache.ttlSeconds[timeframe]);
-  return NextResponse.json(
-    { ok: true, timeframe, emitted: board.emitted, universeSize: board.universeSize, asOf: board.asOf },
-    { headers: { 'cache-control': 'no-store' } },
-  );
+  const startedAt = Date.now();
+  // Track how far we got so a failure says *what* broke, not just "500".
+  let stage: 'follows' | 'scan' | 'store' = 'follows';
+  let universeSize = 0;
+  try {
+    const followed = await followStore.allSymbols().catch(() => []);
+
+    stage = 'scan';
+    const board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
+    universeSize = board.universeSize;
+
+    stage = 'store';
+    await boardStore.set(timeframe, board, WEB_CONFIG.cache.ttlSeconds[timeframe]);
+
+    return NextResponse.json(
+      {
+        ok: true,
+        timeframe,
+        emitted: board.emitted,
+        refused: board.refused,
+        skipped: board.skipped,
+        universeSize: board.universeSize,
+        asOf: board.asOf,
+        ms: Date.now() - startedAt,
+      },
+      { headers: { 'cache-control': 'no-store' } },
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : 'Error';
+    // Surfaces in the Cloudflare Worker logs (stack included there).
+    console.error(
+      `[cron/scan] ${timeframe} failed during "${stage}" after ${Date.now() - startedAt}ms: ${name}: ${message}`,
+      err instanceof Error ? err.stack : undefined,
+    );
+    // …and in the HTTP body so the scheduler's log shows the cause, not just 500.
+    return NextResponse.json(
+      {
+        ok: false,
+        timeframe,
+        stage,
+        error: `${name}: ${message}`,
+        universeSize,
+        ms: Date.now() - startedAt,
+        hint:
+          stage === 'scan'
+            ? 'The scan fan-out likely hit the Cloudflare free-tier subrequest/CPU limit — see COSTS.md (Workers Paid) or reduce scan.maxUniverse.'
+            : stage === 'store'
+              ? 'Writing the board to the store failed — check the Upstash runtime env vars on the Worker.'
+              : 'Reading the followed universe failed — check the Supabase / follow-store configuration.',
+      },
+      { status: 500, headers: { 'cache-control': 'no-store' } },
+    );
+  }
 }

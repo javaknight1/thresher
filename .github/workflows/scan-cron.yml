@@ -25,9 +25,18 @@ jobs:
           if [ -z "$CRON_SECRET" ]; then echo "CRON_SECRET not set — add it as a repo secret"; exit 1; fi
           fail=0
           for tf in intraday swing position; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
+            # Capture the response body AND the status so a failure shows the cause,
+            # not just the HTTP code. The endpoint returns JSON { ok, stage, error, hint }.
+            body=$(mktemp)
+            code=$(curl -s -o "$body" -w "%{http_code}" --max-time 120 \
               "$BASE_URL/api/cron/scan?timeframe=$tf&key=$CRON_SECRET")
-            echo "$tf -> HTTP $code"
-            [ "$code" = "200" ] || fail=1
+            if [ "$code" = "200" ]; then
+              echo "✓ $tf -> HTTP 200 :: $(cat "$body")"
+            else
+              echo "::error title=cron $tf failed (HTTP $code)::$(cat "$body")"
+              echo "✗ $tf -> HTTP $code :: $(cat "$body")"
+              fail=1
+            fi
+            rm -f "$body"
           done
           exit $fail
