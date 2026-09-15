@@ -1,0 +1,49 @@
+# Dependabot — weekly dependency updates.
+#
+# Two ecosystems, one update day (Mondays) so the firehose lands in a single
+# triage block. PRs come pre-grouped (minor+patch) so one review clears them;
+# majors stay individual for a real look. SECURITY-update PRs (CVE-driven) are
+# separate and automatic once "Dependabot security updates" is enabled in repo
+# settings (see MANUAL.md).
+#
+# Triage: minor/patch auto-merge once CI is green (dependabot-automerge.yml);
+# majors get a human. Dependabot can't fix transitive CVEs with no direct-dep
+# release — bump the parent, or accept until upstream ships (see security-scan).
+
+version: 2
+updates:
+  # App / monorepo dependencies (pnpm; single root lockfile covers the workspace).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 10
+    labels:
+      - "deps"
+      - "npm"
+    commit-message:
+      prefix: "deps(npm)"
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions (checkout, setup-node, fetch-metadata, …) — action versions
+  # get advisories too.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 5
+    labels:
+      - "deps"
+      - "ci"
+    commit-message:
+      prefix: "deps(actions)"

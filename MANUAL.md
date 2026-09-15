@@ -154,6 +154,28 @@ when follows need to be durable and shared across isolates.
 
 ---
 
+## ☐ Dependency security (Dependabot + auto-merge)
+
+Config is in the repo (`.github/dependabot.yml`, `.github/workflows/`), but three
+**repo settings** must be toggled by hand (Settings → …):
+
+1. **Dependabot security updates** — Settings → *Advanced Security* (or *Code
+   security*): enable **Dependabot alerts** and **Dependabot security updates**.
+   This is what opens CVE-driven PRs automatically (separate from the weekly
+   version-update schedule).
+2. **Let Actions merge the auto-merge PRs** — Settings → Actions → General →
+   *Workflow permissions*: enable **"Allow GitHub Actions to create and approve
+   pull requests."** (`dependabot-automerge.yml` merges patch/minor PRs once CI
+   is green; majors are left for review.)
+3. Optional: a weekly **Security scan** workflow (`security-scan.yml`) runs
+   `pnpm audit` on the production deps and can be triggered on demand (Actions →
+   Security scan → Run workflow).
+
+> Auto-merge triggers on `workflow_run` after **CI** passes (free-tier private
+> repos have no branch protection for GitHub's native auto-merge to wait on).
+> If you rename the `CI` workflow, update the `workflows: ["CI"]` line in
+> `dependabot-automerge.yml` or auto-merge silently stops.
+
 ## After every new key
 
 1. Add the value to `.env.local` (for local dev).
