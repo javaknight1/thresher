@@ -91,8 +91,15 @@ sibling project's v0.2.0 step), add:
   isn't hand-assembled.
 - [x] **CI** (`.github/workflows/ci.yml`) — typecheck + lint + unit tests on
   every push to `master` and on PRs.
-- [ ] **Release workflow:** a `v*`-tag workflow that publishes the GitHub
-  Release (notes = user-facing commit subjects since the previous tag).
+- [x] **Security auto-release** — when `dependabot-automerge.yml` merges a
+  *security* update (PR references a GHSA/CVE), it bumps the patch version,
+  tags, and publishes the GitHub Release automatically. Routine dependency
+  bumps merge without a release. (This bot path does NOT update the
+  "`origin/master` is `X`" pointer above — re-sync it on the next manual
+  release; it's just a doc note, not the source of truth.)
+- [ ] **General release workflow:** a `v*`-tag workflow that publishes the
+  GitHub Release for *manual* releases too (notes = user-facing commit subjects
+  since the previous tag), so tagging is all that's needed.
 - [ ] **Decide deploy gating:** either keep Cloudflare auto-deploy on `master`
   (tags stay pure markers) or gate production on tags. If we gate, document it
   here and flip the Cloudflare build trigger.

@@ -7,6 +7,10 @@ name: Dependabot auto-merge
 # workflow gates on CI completing instead. workflow_run also runs with a normal
 # (writable) GITHUB_TOKEN, sidestepping the read-only token Dependabot PRs get.
 #
+# On a SECURITY update (the PR references a GHSA/CVE advisory) it also cuts a
+# patch release afterward, so the fix deploys as a tagged version. Routine
+# dependency bumps merge without a release.
+#
 # The `workflows:` value must match ci.yml's `name:` EXACTLY — a rename on
 # either side silently disables auto-merge (workflow_run just never fires).
 
@@ -27,6 +31,13 @@ jobs:
       github.event.workflow_run.actor.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout master (for the release bump)
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Resolve PR + bump kind
         id: meta
         env:
@@ -54,7 +65,7 @@ jobs:
           fi
 
           # Single-package bumps look like:
-          #   "deps(npm): bump next from 15.5.1 to 15.5.2"
+          #   "deps(npm): bump next from 15.5.2 to 15.5.25"
           #   "deps(actions): bump actions/checkout from 4 to 5"
           # Same major = auto-merge; different major = leave for review.
           if [[ "$TITLE" =~ from\ ([0-9]+)(\.[0-9]+)?(\.[0-9]+)?\ to\ ([0-9]+)(\.[0-9]+)?(\.[0-9]+)? ]]; then
@@ -77,6 +88,45 @@ jobs:
         run: |
           echo "Merging PR #${{ steps.meta.outputs.number }} (${{ steps.meta.outputs.kind }}): ${{ steps.meta.outputs.title }}"
           gh pr merge --squash --delete-branch --repo "$REPO" "${{ steps.meta.outputs.number }}"
+
+      - name: Cut a patch release if this was a security update
+        if: steps.meta.outputs.number && (steps.meta.outputs.kind == 'group' || steps.meta.outputs.kind == 'patch_or_minor')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ steps.meta.outputs.number }}
+          TITLE: ${{ steps.meta.outputs.title }}
+        run: |
+          set -euo pipefail
+          BODY=$(gh pr view "$NUMBER" --repo "$REPO" --json body --jq .body || echo "")
+          # Dependabot SECURITY-update PRs reference the advisory (GHSA / CVE)
+          # or say "security". Routine version bumps don't — so they skip here.
+          if ! grep -qiE 'GHSA-[0-9a-z]|CVE-[0-9]|security (advisor|vulnerabilit|fix|update|patch)|vulnerabilit' <<<"$BODY $TITLE"; then
+            echo "PR #$NUMBER is not a security update — merged, no release."
+            exit 0
+          fi
+
+          echo "Security update detected — cutting a patch release."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Sync to the just-merged master.
+          git fetch --quiet origin master
+          git checkout -B master origin/master
+
+          CUR=$(node -p "require('./package.json').version")
+          NEXT=$(npm version patch --no-git-tag-version)   # edits root package.json only
+          NEXT=${NEXT#v}
+
+          git add package.json
+          git commit -m "release: v$NEXT" \
+            -m "Security dependency update auto-merged (PR #$NUMBER: $TITLE) — $CUR -> v$NEXT."
+          git tag -a "v$NEXT" -m "v$NEXT — security dependency update"
+          git push origin master
+          git push origin "v$NEXT"
+          gh release create "v$NEXT" --repo "$REPO" --latest \
+            --title "v$NEXT — security update" \
+            --notes "Automated patch release: security dependency update auto-merged (PR #$NUMBER: $TITLE)."
+          echo "Released v$NEXT"
 
       - name: Skip note
         if: steps.meta.outputs.number && (steps.meta.outputs.kind == 'major' || steps.meta.outputs.kind == 'unknown')
