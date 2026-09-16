@@ -1,6 +1,40 @@
 import { describe, it, expect } from 'vitest';
-import { MemoryFollowStore } from '../lib/follow-store';
+import type { Redis } from '@upstash/redis';
+import { MemoryFollowStore, UpstashFollowStore } from '../lib/follow-store';
 import { normalizeSymbol } from '../lib/symbols';
+
+/** Minimal in-memory fake of the Upstash set commands used by the store. */
+class FakeRedis {
+  private sets = new Map<string, Set<string>>();
+  private s(k: string): Set<string> {
+    let set = this.sets.get(k);
+    if (!set) this.sets.set(k, (set = new Set()));
+    return set;
+  }
+  async sadd(k: string, ...m: string[]) {
+    const set = this.s(k);
+    let n = 0;
+    for (const x of m) {
+      if (!set.has(x)) {
+        set.add(x);
+        n++;
+      }
+    }
+    return n;
+  }
+  async srem(k: string, ...m: string[]) {
+    const set = this.s(k);
+    let n = 0;
+    for (const x of m) if (set.delete(x)) n++;
+    return n;
+  }
+  async smembers(k: string) {
+    return [...this.s(k)];
+  }
+  async scard(k: string) {
+    return this.s(k).size;
+  }
+}
 
 describe('normalizeSymbol', () => {
   it('uppercases and trims', () => {
@@ -51,5 +85,32 @@ describe('MemoryFollowStore', () => {
     await s.add('u3', 'TSLA');
     expect(new Set(await s.followersOf('nvda'))).toEqual(new Set(['u1', 'u2']));
     expect(await s.followersOf('AMD')).toEqual([]);
+  });
+});
+
+describe('UpstashFollowStore', () => {
+  const make = () => new UpstashFollowStore(new FakeRedis() as unknown as Redis);
+
+  it('APPENDS on repeated adds (the multi-isolate replace bug regression)', async () => {
+    const s = make();
+    await s.add('u1', 'nvda');
+    await s.add('u1', 'aapl'); // must NOT replace NVDA
+    expect(await s.list('u1')).toEqual(['AAPL', 'NVDA']); // sorted, both present
+    expect(await s.count('u1')).toBe(2);
+  });
+
+  it('removes, keeps the universe pruned, and fans out followers', async () => {
+    const s = make();
+    await s.add('u1', 'NVDA');
+    await s.add('u2', 'NVDA');
+    await s.add('u1', 'TSLA');
+    expect(new Set(await s.allSymbols())).toEqual(new Set(['NVDA', 'TSLA']));
+    expect(new Set(await s.followersOf('NVDA'))).toEqual(new Set(['u1', 'u2']));
+
+    await s.remove('u1', 'NVDA'); // u2 still follows NVDA → stays in universe
+    expect(new Set(await s.allSymbols())).toEqual(new Set(['NVDA', 'TSLA']));
+    await s.remove('u2', 'NVDA'); // now nobody → drops from universe
+    expect(new Set(await s.allSymbols())).toEqual(new Set(['TSLA']));
+    expect(await s.list('u1')).toEqual(['TSLA']);
   });
 });

@@ -11,7 +11,9 @@
  * runs on the Cloudflare Workers runtime), authenticated with the service-role
  * key — these routes are server-only.
  */
+import { Redis } from '@upstash/redis';
 import { normalizeSymbol } from './symbols';
+import { upstashConfigured } from './upstash';
 import { globalSingleton } from './global-singleton';
 
 export interface FollowStore {
@@ -140,12 +142,77 @@ export class SupabaseFollowStore implements FollowStore {
   }
 }
 
-/** Supabase when configured (URL + service-role key), in-memory otherwise.
- *  The in-memory store is a global singleton so it survives dev HMR and is
- *  shared across routes (e.g. the scan universe reads it). */
+/**
+ * Upstash (Redis) follow store. Uses sets:
+ *   thresher:follows:{userId}   — the user's symbols
+ *   thresher:followers:{symbol} — who follows a symbol (notification fan-out)
+ *   thresher:follows:symbols    — the distinct union (the scan universe)
+ * This is durable and **shared across Cloudflare isolates** — unlike the
+ * in-memory store, which is per-isolate (so a second add can land on a fresh
+ * isolate that only knows the new symbol, silently "replacing" the list).
+ */
+export class UpstashFollowStore implements FollowStore {
+  private readonly redis: Redis;
+
+  constructor(redis?: Redis) {
+    this.redis = redis ?? Redis.fromEnv();
+  }
+
+  private userKey(userId: string): string {
+    return `thresher:follows:${userId}`;
+  }
+  private followersKey(symbol: string): string {
+    return `thresher:followers:${symbol}`;
+  }
+  private readonly universeKey = 'thresher:follows:symbols';
+
+  async list(userId: string): Promise<string[]> {
+    const members = (await this.redis.smembers(this.userKey(userId))) as string[];
+    return members.sort(); // sets are unordered — stable alphabetical for the UI
+  }
+
+  async add(userId: string, symbol: string): Promise<boolean> {
+    const sym = normalizeSymbol(symbol);
+    const added = await this.redis.sadd(this.userKey(userId), sym);
+    await this.redis.sadd(this.followersKey(sym), userId);
+    await this.redis.sadd(this.universeKey, sym);
+    return added > 0;
+  }
+
+  async remove(userId: string, symbol: string): Promise<void> {
+    const sym = normalizeSymbol(symbol);
+    await this.redis.srem(this.userKey(userId), sym);
+    await this.redis.srem(this.followersKey(sym), userId);
+    // Drop the symbol from the scan universe once nobody follows it.
+    if ((await this.redis.scard(this.followersKey(sym))) === 0) {
+      await this.redis.srem(this.universeKey, sym);
+    }
+  }
+
+  async count(userId: string): Promise<number> {
+    return this.redis.scard(this.userKey(userId));
+  }
+
+  async allSymbols(): Promise<string[]> {
+    return (await this.redis.smembers(this.universeKey)) as string[];
+  }
+
+  async followersOf(symbol: string): Promise<string[]> {
+    return (await this.redis.smembers(this.followersKey(normalizeSymbol(symbol)))) as string[];
+  }
+}
+
+/**
+ * Store selection, most-durable first:
+ *   Supabase (if configured) → Upstash (if configured) → in-memory.
+ * The in-memory fallback is a global singleton (survives dev HMR, shared across
+ * routes) but is per-isolate in production — fine for local/CI, not for a
+ * deployed multi-isolate Worker, which is why Upstash sits ahead of it.
+ */
 export function createFollowStore(): FollowStore {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (url && serviceKey) return new SupabaseFollowStore(url, serviceKey);
+  if (upstashConfigured()) return new UpstashFollowStore();
   return globalSingleton('thresher:follow-store', () => new MemoryFollowStore());
 }
