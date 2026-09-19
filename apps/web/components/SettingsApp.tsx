@@ -128,7 +128,7 @@ export default function SettingsApp() {
 
   return (
     <>
-      <SiteHeader showBack />
+      <SiteHeader />
       <div className={styles.page} data-testid="settings-page">
         <PageHero kicker="preferences" title="Settings">
           Display and convenience only — these never change the engine’s math, just how Thresher
