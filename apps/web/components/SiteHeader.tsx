@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import AuthNav from './AuthNav';
+import Brandmark from './Brandmark';
 import CommandPalette from './CommandPalette';
 import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage } from './icons';
 import styles from './SiteHeader.module.css';
@@ -42,11 +43,7 @@ export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
               ← Back
             </button>
           )}
-          <Link href="/leaderboard" className={styles.wordmark}>
-            {/* brand mark (same as the favicon) */}
-            <img src="/icon.svg" alt="" className={styles.mark} width={20} height={20} />
-            THRESHER
-          </Link>
+          <Brandmark href="/leaderboard" />
         </div>
 
         <nav className={styles.nav} aria-label="primary">
