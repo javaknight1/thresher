@@ -59,6 +59,92 @@ review after M0 and M1.
 - [ ] Isotonic calibration table (n ≥ 300/bucket), versioned; UI shows calibrated hit rate alongside agreement score; G4 switches p to calibrated value
 - [ ] Threshold tuning on train period, walk-forward validation; T1/T2 scale-outs; entry zones
 
+## Settings & Preferences (planned 2026-09-16)
+
+A user-facing **Preferences** surface. Framing so anyone can pick this up:
+
+- **Clerk already owns "account"** — name, email, password, connected accounts,
+  active sessions, sign-out all live in the Clerk `UserButton` (rendered by
+  `components/AuthNav.tsx`). Don't rebuild those; this section is Thresher's own
+  *preferences*, plus a couple of account actions Clerk doesn't surface nicely.
+- **HARD RULE — no engine knobs.** Settings may change *display/convenience*
+  only, never engine math (weights, thresholds ±0.22 / conf 35 / RR 1.2 / G4
+  0.25, ATR multipliers, penalties). Those are versioned design decisions
+  (`packages/engine/src/config.ts`, CLAUDE.md). There is deliberately no
+  "tune the strategy" control.
+- **Storage strategy (no new infra for the first cut):** persist signed-in
+  prefs in **Clerk `unsafeMetadata.prefs`** — the same pattern already used for
+  `onboardedAt` (see `components/OnboardingGate.tsx`). In open/keyless mode (no
+  Clerk keys — CI/e2e/zero-env) fall back to **localStorage**. Wrap both behind
+  a `lib/prefs` client helper (`usePrefs()` / `setPref()`), mirroring
+  `lib/follows-client.ts`. This needs **no Supabase and no paid services**.
+
+### First cut — a `/settings` page + prefs helper (buildable now)
+
+- [ ] **`lib/prefs` helper** — `usePrefs()` returning a typed `Prefs` object with
+  defaults, and `setPref(key, value)` that writes to Clerk `unsafeMetadata.prefs`
+  when signed in, else localStorage. Shared singleton like `follows-client`
+  (useSyncExternalStore) so every consumer stays in sync. Define `Prefs` +
+  defaults in `lib/config.ts` (`WEB_CONFIG.prefs.defaults`). Unit-test the
+  merge/normalize logic.
+- [ ] **`/settings` route + entry points** — a protected page (add to
+  `middleware.ts` `isProtected`), plus discoverable entry points: a "Settings"
+  item in the profile menu (near `AuthNav`) **and** a command-palette action
+  (`components/CommandPalette.tsx` NAV list) + `/settings` nav. Use the shared
+  `PageHero`. Public/marketing pages unaffected.
+- [ ] **Default timeframe** (Hourly/Daily/Weekly = intraday/swing/position) —
+  replaces the hardcoded `'swing'` default in `components/AnalyzeApp.tsx`
+  (`useState<Timeframe>` initializer) and the board's default view. Read from
+  prefs when the URL doesn't specify one. Acceptance: set Weekly → open
+  `/analyze` with no `?timeframe=` → Weekly is selected.
+- [ ] **Position-sizer defaults** — account size + per-trade risk %. Currently
+  the sizer (`components/PositionSizer.tsx`) stores these in localStorage keys
+  `thresher:accountSize` / `thresher:riskPct`; **migrate those into `prefs`** so
+  they follow a signed-in user across devices. Keep localStorage as the
+  open-mode fallback. Acceptance: set them in Settings → they prefill the sizer
+  on any analysis.
+- [ ] **Default board view** — starting sort key (Score/Quality/R:R/Agreement),
+  direction filter, and min R:R for the Leaderboard. These are already URL
+  params (`components/ScanApp.tsx`, `?tab/dir/minrr/sort`); prefs set the
+  *initial* values when the URL omits them. Acceptance: default sort = R:R →
+  open `/leaderboard` → board sorts by R:R.
+- [ ] **Theme toggle** — light / dark / **system**. The app is already
+  theme-aware via CSS tokens (`app/globals.css`); add an explicit toggle that
+  sets `data-theme` on `<html>` and persists to prefs (default: system /
+  `prefers-color-scheme`). No palette rework needed — tokens already exist.
+- [ ] **Re-run onboarding / reset watchlist** — a button to replay the
+  onboarding wizard (clear `unsafeMetadata.onboardedAt`, or reuse the
+  `GuideIntroButton` mechanism) and a "reset to the default starter watchlist"
+  action (re-seed `WEB_CONFIG.follows.defaultWatchlist` via the follows client).
+- [ ] **Currency / number format** — how money is displayed (symbol + grouping)
+  across the sizer, board, and watchlist. Small; display-only.
+
+### Account actions (Clerk-adjacent)
+
+- [ ] **Delete account / data** — surface Clerk's delete-account, and (once
+  Supabase is live) also purge the user's follows/notifications rows. Danger-zone
+  styling + confirm.
+
+### Depends on deferred features (spec now, build when the feature lands)
+
+- [ ] **Notification settings** *(needs the in-app notifications feature +
+  Supabase/cron — see M2 "In-app follow notifications")* — channel (in-app now;
+  email later via Resend), which triggers fire (new qualifying setup on a
+  followed stock; earnings-in-window warning), a **min Setup Score to notify**
+  threshold (a notification filter, NOT an engine change), digest cadence, and
+  quiet hours.
+- [ ] **Data & transparency** — toggle the data-freshness stamp; show the
+  running `engineVersion` / `configHash` (trust/debug); choose a data source
+  *once there's more than Yahoo* (Polygon/Tiingo — see `COSTS.md`).
+- [ ] **Timezone** — used by the "as of" freshness stamps and the market-open
+  hint (`lib/market-hours.ts` currently assumes ET). Default to the browser TZ.
+- [ ] **Privacy & legal** — export my data (follows, saved analyses); analytics
+  opt-out *(once PostHog lands)*; links to Terms / Privacy / Disclaimer and a
+  re-acknowledge action. (Legal pages themselves are pre-Stripe work — see the
+  payments discussion.)
+- [ ] **Billing** *(needs Stripe)* — current plan/tier, payment method,
+  invoices, upgrade / cancel. Slots in once billing exists.
+
 ## Parking lot (design doc §11)
 
 - [x] Universe guardrails: CONFIRMED 2026-06-10 — enforced at the API layer as 422 UNTRADEABLE_SYMBOL
