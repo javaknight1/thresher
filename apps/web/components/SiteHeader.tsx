@@ -43,7 +43,7 @@ export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
               ← Back
             </button>
           )}
-          <Brandmark href="/leaderboard" />
+          <Brandmark href="/dashboard" />
         </div>
 
         <nav className={styles.nav} aria-label="primary">
