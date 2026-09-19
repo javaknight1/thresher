@@ -22,12 +22,17 @@ A user enters a ticker and picks a timeframe. The engine returns one of two thin
 - No order execution, no brokerage connection. Read-only, advisory output.
 - No return predictions. It reports the *math of a defined-risk setup* (what you gain if target hits, what you lose if stop hits), never "this stock will go up X%."
 - No uncalibrated probability claims. Until the backtest pipeline (§7) produces real per-bucket win rates, confidence is labeled as a *signal-agreement score*, not a win probability.
-- No futures or crypto. US equities and ETFs only.
-- **Options were excluded from v1** and are now a **net-new post-M4 milestone (M5)** —
-  a separate pure `packages/options-engine` that *consumes* the equity read and returns
-  a single best defined-risk options trade. Its binding math is **methodology Part III**
-  (proposed/awaiting sign-off); its API contract is `GET /api/v1/options` (§8). The
-  equity engine remains the core and never depends on the options engine.
+- No futures. (Equities/ETFs at launch.)
+- **Crypto** is a shipped milestone (**M5**): spot coins (`BTC-USD`, …) on free Yahoo,
+  reusing the equity engine via a tuned **`CRYPTO_CONFIG`** + fractional sizing, surfaced
+  in a dedicated crypto section. Binding math is **methodology Part IV**
+  (proposed/awaiting sign-off). There is **no second engine** — crypto is a config, not
+  a new package.
+- **Options** are a **net-new post-crypto milestone (M6)** — a separate pure
+  `packages/options-engine` that *consumes* the equity read and returns a single best
+  defined-risk options trade. Binding math is **methodology Part III**
+  (proposed/awaiting sign-off); API contract `GET /api/v1/options` (§8). The equity
+  engine remains the core and never depends on the options engine.
 
 ### 1.3 Design principles
 
@@ -102,6 +107,10 @@ Stale-while-revalidate: serve cached bars immediately, refresh in background if 
 | Intraday | 1 h | hours–2 days | 1 trading day |
 | Swing | 1 d | 3–20 days | 3 trading days |
 | Position | 1 w | 1–6 months | none (flag only) |
+
+**Crypto** (M5) uses the same three profiles and lookbacks, but trades 24/7: there is no
+earnings-veto column (G5 off), volume day-normalization uses 24 h/day (not a 6.5 h
+session), and there is no price floor. See methodology Part IV.
 
 ---
 
@@ -407,7 +416,16 @@ Storage: `backtest_runs`, `setups`, `outcomes`, `calibration` tables in Supabase
 }
 ```
 
-### 8.1 Options (M5, net-new) — methodology Part III
+### 8.1 Crypto (M5) — methodology Part IV
+
+Crypto reuses the **same** `GET /api/v1/analyze` endpoint with a `BASE-USD` symbol
+(`?symbol=BTC-USD&timeframe=swing`). The response shape is identical to the equity body
+above, with three differences: `configHash` reflects **`CRYPTO_CONFIG`**; `plan.sizing`
+reports **fractional `units`** (+ `unitLabel`) rather than whole shares; and there is no
+earnings-driven `G5` veto (it passes as flag-only). The dedicated crypto board reuses
+`POST /api/v1/scan` over the crypto universe.
+
+### 8.2 Options (M6, net-new) — methodology Part III
 
 `GET /api/v1/options?symbol=NVDA&timeframe=swing[&strike=190][&expiration=2026-08-21]`
 
@@ -476,7 +494,13 @@ Errors: `404 UNKNOWN_SYMBOL`, `429 RATE_LIMITED` (with reset), `503 DATA_UNAVAIL
 - **M2 — Accounts:** Clerk, watchlists, Scan page, saved analyses, History recording (unlabeled).
 - **M3 — Honesty board:** outcome labeler cron, History page with hit rates.
 - **M4 — Calibration:** backtest pipeline, calibrated probabilities in UI, threshold tuning, T1/T2 scale-outs, entry zones.
-- **M5 — Options (net-new):** pure `packages/options-engine` (Black-Scholes greeks,
+- **M5 — Crypto (net-new):** spot coins (`BTC-USD`, …) on free Yahoo, **reusing the
+  equity engine** via a tuned **`CRYPTO_CONFIG`** (own version + hash), the earnings gate
+  G5 off, and **fractional sizing**; a dedicated `/crypto` board + crypto-aware Analyze
+  (no fundamentals panel, no market-closed hint). Per **methodology Part IV**; `GET
+  /api/v1/analyze?symbol=BTC-USD` (§8). Phase 0 (Part IV sign-off) is a hard gate before
+  any engine change.
+- **M6 — Options (net-new):** pure `packages/options-engine` (Black-Scholes greeks,
   contract scorer, ordered `OG` refusal gates, full defined-risk strategy library) per
   **methodology Part III**; `GET /api/v1/options?symbol=&timeframe=&strike?=&expiration?=`
   returning the single best trade + greeks education + payoff; an `/options` page

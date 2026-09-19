@@ -59,6 +59,26 @@ review after M0 and M1.
 - [ ] Isotonic calibration table (n ≥ 300/bucket), versioned; UI shows calibrated hit rate alongside agreement score; G4 switches p to calibrated value
 - [ ] Threshold tuning on train period, walk-forward validation; T1/T2 scale-outs; entry zones
 
+## M5 — Crypto (net-new, planned 2026-09-18)
+
+Spot coins (`BTC-USD`, …) on free Yahoo, **reusing the equity engine** (no second
+package) via a tuned config + fractional sizing, in a dedicated crypto section. Binding
+math = **methodology Part IV** (proposed). Plan: `~/.claude/plans/delightful-rolling-marble.md`.
+
+- [ ] **Phase 0 (BLOCKING):** methodology **Part IV — Crypto** + design amendments
+  (§1.2, §2.2, §8.1, §10 M5). **Human sign-off before any engine change.** ← docs written, awaiting sign-off.
+- [ ] **Phase 1 — engine:** `CRYPTO_CONFIG` (tuned weights/ATR mults, `earningsVetoTradingDays`
+  all null, own hash); fractional sizing (`sizing.unitStep`/`unitLabel`; `Sizing.shares`→`units`);
+  `ENGINE_VERSION` bump; worked-example fixture + fractional-sizing + config-parity tests; coverage ≥ 90%.
+- [ ] **Phase 2 — web data:** `lib/asset-class.ts` (`assetClassOf` + `engineConfigFor`);
+  `WEB_CONFIG.crypto` (curated coins, samples, 24 h guardrails); `checkGuardrails(…, assetClass)`;
+  analyze-service picks config + null earnings for coins; `yahoo.search()` include `CRYPTOCURRENCY`;
+  MockProvider crypto fixtures.
+- [ ] **Phase 3 — product:** dedicated `/crypto` board + nav; Analyze adapts (CryptoPanel, no
+  market-closed hint); fractional `PositionSizer`/`lib/position-size`.
+- [ ] **Phase 4 — methodology pages:** generalize `SECTION_HEADING` to `[IVX]+`; add `crypto`
+  MethodologyPart + SLUG_MAPS + `app/methodology/crypto/[slug]`; crypto grid + Disclaimer caveat.
+
 ## Settings & Preferences (planned 2026-09-16)
 
 A user-facing **Preferences** surface. Framing so anyone can pick this up:

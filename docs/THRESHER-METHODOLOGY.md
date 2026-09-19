@@ -4,9 +4,9 @@
 
 This document serves two purposes: it is the implementation spec for `packages/engine` (Parts I–II) and the future `packages/options-engine` (Part III), and it is the source content for the public `/methodology` documentation pages. If a calculation isn't in this document, the engine doesn't do it.
 
-Companion to `THRESHER-DESIGN.md`. Version 1.1 (adds **Part III — Options**, proposed/awaiting sign-off).
+Companion to `THRESHER-DESIGN.md`. Version 1.2 (adds **Part IV — Crypto**, proposed/awaiting sign-off; Part III — Options remains proposed, deferred behind crypto).
 
-**Docs site structure** (each Part I/II/III section below = one page):
+**Docs site structure** (each Part I–IV section below = one page):
 
 ```
 /methodology                    → overview + pipeline diagram
@@ -16,6 +16,8 @@ Companion to `THRESHER-DESIGN.md`. Version 1.1 (adds **Part III — Options**, p
                                   stops, targets, gates, sizing
 /methodology/options/{slug}     → delta, gamma, theta, vega, rho, pricing,
                                   strategies, exits, gates, limitations (Part III)
+/methodology/crypto/{slug}      → profile, sizing, volume, guardrails,
+                                  example, limitations (Part IV)
 /methodology/example            → worked end-to-end trade derivation
 /methodology/limitations        → what this engine cannot see
 ```
@@ -1095,3 +1097,215 @@ limitation (which still applies to the underlying read):
 8. **Nothing here is financial advice.** Options carry more risk than the underlying
    shares. The engine reports structure and defined-risk arithmetic; the decision, and
    the risk, belong to the user.
+
+---
+
+# Part IV — Crypto
+
+> **Status: PROPOSED — awaiting sign-off.** Part IV is the binding spec for crypto
+> support, authored **before** any engine change (project rule). Until signed off, no
+> crypto code is written; once signed off, if code and this Part disagree, **this Part
+> wins**. Crypto ships **before** options (Part III stays proposed/deferred).
+
+Crypto is **not a different kind of technical analysis.** Every indicator (Part I), the
+four families, the composite, direction, confidence, and the stop/target/R:R math (Part
+II) operate on an abstract OHLCV series keyed by epoch-ms and never inspect the calendar.
+So crypto **reuses the equity engine unchanged** — there is no second engine. What Part
+IV defines is the *small, deliberate surface* that differs: a **tuned config profile**,
+the **earnings gate turned off**, **fractional sizing**, and the **24/7 / volume-quality**
+framing. Everything not listed here is identical to Parts I–II.
+
+## IV.1 Scope and the reused core
+
+- **In scope:** spot cryptocurrencies quoted in USD via the free Yahoo feed (`BTC-USD`,
+  `ETH-USD`, …). Same three timeframes as equities — **Hourly** (1h), **Daily** (1d),
+  **Weekly** (1w) — same lookbacks, same candle intervals.
+- **Reused verbatim from Parts I–II:** all indicators; the four families and their
+  component point tables; the composite `S`; the direction threshold; the confidence
+  base/slope/ceiling/floor; stop placement (structure − ATR buffer, floor/cap); target
+  selection (structure-first, projection fallback); and refusal gates **G1–G4**. The only
+  engine differences are the **constants** (IV.4), **G5** (IV.5), and **sizing units**
+  (IV.6).
+
+## IV.2 Asset-class definition
+
+A symbol is **crypto** iff it is in the curated crypto registry **or** matches the Yahoo
+crypto quote form `BASE-USD` (uppercase base of 2–5 letters, `-USD`/`-USDT` suffix). The
+classification is a **web-layer** decision (`assetClassOf(symbol)`); the pure engine never
+maps symbols to a class — the web layer simply passes the matching config
+(`DEFAULT_CONFIG` for equities, `CRYPTO_CONFIG` for crypto) into `analyze(bars, config,
+ctx)`. Each config carries its **own version + config hash**, stamped into every result,
+so equity and crypto provenance never collide.
+
+## IV.3 What changes vs. equities — at a glance
+
+| Concern | Equity (Parts I–II) | Crypto (Part IV) |
+|---|---|---|
+| Engine code | `packages/engine` | **same engine**, different config |
+| Config | `DEFAULT_CONFIG` | **`CRYPTO_CONFIG`** (IV.4) |
+| Earnings gate G5 | active (veto window) | **off** — no earnings (IV.5) |
+| Sizing unit | whole **shares** (`floor`) | **fractional units** (IV.6) |
+| Volume day-normalization | `perDayFactor` 6.5 (session) | **24** (24/7) (IV.7) |
+| Price floor guardrail | `$2` | **none** (IV.8) |
+| Market-hours "closed" hint | shown | **suppressed** (24/7) |
+| Fundamentals panel | shown | **hidden** (N/A for coins) |
+
+## IV.4 The tuned crypto profile — `CRYPTO_CONFIG`
+
+These are the versioned crypto constants (the sign-off centerpiece). They are **reasoned
+priors, not measured optima** — exactly the status the equity set carries (II.2) — and a
+future crypto calibration pass tunes them. Departures from the equity values, with
+rationale:
+
+**Family weights** (equity → crypto):
+
+| Timeframe | Trend | Momentum | Volume | Structure |
+|---|---|---|---|---|
+| Hourly | 0.30 → **0.30** | 0.35 → **0.40** | 0.20 → **0.10** | 0.15 → **0.20** |
+| Daily | 0.35 → **0.40** | 0.30 → **0.30** | 0.15 → **0.10** | 0.20 → **0.20** |
+| Weekly | 0.45 → **0.50** | 0.20 → **0.20** | 0.10 → **0.10** | 0.25 → **0.20** |
+
+*Rationale:* crypto is momentum- and trend-driven; **volume is down-weighted** (not up)
+because crypto volume is unreliable (wash trading, fragmented venues — IV.7), so we lean
+on price-derived evidence and keep the noisiest input small. Weights still sum to 1.0.
+
+**Direction threshold:** `0.22` — **unchanged**. No evidence to move the confluence bar;
+keeping it symmetric avoids an un-earned claim.
+
+**ATR multipliers — wider, for fatter tails** (equity → crypto):
+
+```
+stop.bufferAtr      0.45 → 0.60     (levels get pierced by wicks more often)
+stop.floorAtr       0.80 → 1.00     (a wider minimum stop survives 24/7 noise)
+stop.capAtr         2.20 → 3.00     (allow a wider max stop given higher vol)
+target.projectionAtrMult 2.5 → 3.0  (projection matches larger swings)
+target.projectionR  2   → 2         (unchanged)
+target.structureMinR 1.4 → 1.4      (unchanged)
+```
+
+*Rationale:* crypto's realized volatility and wick depth are proportionally larger; wider
+buffers/caps cut premature stop-outs while the ATR denomination keeps everything
+self-scaling per coin.
+
+**Confidence:** base `35`, slope `75`, ceiling `95`, floor `5`, `dissentThreshold 0.15` —
+**unchanged**. Penalties: `choppy 12`, `dissent 8`, `rsiExtreme 8`, `thin 5` — unchanged;
+the **`earnings` penalty is inert** (no earnings). Buckets `highMin 70`, `moderateMin 45`
+— unchanged.
+
+**Gates:** `minConfidence 35`, `minRR 1.2`, `evMargin 0.25` — **unchanged** (risk
+discipline is asset-agnostic).
+
+`CRYPTO_CONFIG` also sets `earningsVetoTradingDays: { intraday: null, swing: null,
+position: null }` (IV.5) and the sizing fields in IV.6.
+
+## IV.5 The earnings gate (G5) is off for crypto
+
+Crypto has no earnings, so G5 is disabled by config: `earningsVetoTradingDays` is `null`
+for every timeframe (which II.7 already treats as *flag-only, never veto*), and the web
+layer passes `tradingDaysToEarnings: null`. The engine's existing null-safe path (G5 pass,
+"earnings date unknown") applies unchanged — no special-casing in the engine.
+
+A future **event veto** for crypto-specific catalysts (token unlocks, exchange listings,
+protocol upgrades, halvings) is **deferred** — the free feed has no such calendar. When a
+data source exists it becomes the crypto analog of G5.
+
+## IV.6 Fractional sizing
+
+Equity sizing floors to **whole shares** (II.8). For crypto that is wrong — a $250 risk
+on a $60k coin floors to **0 units**. Crypto sizes in **fractional units**:
+
+```
+riskPerUnit = |entry − stop|
+rawUnits    = (accountSize × riskFraction) / riskPerUnit
+units       = floor(rawUnits / unitStep) × unitStep      unitStep = 1e-6 for crypto
+```
+
+The label is **"units"** (or the coin), not "shares." Equities keep `unitStep = 1`
+(reproducing today's whole-share `floor` exactly). As with equities, size is a function of
+**stop distance, not conviction**. `riskFraction 0.01` and `exampleAccount 25000`
+(USD) are unchanged.
+
+## IV.7 The 24/7 volume model
+
+- **`perDayFactor = 24`** for Hourly (24 one-hour bars per day, vs the equity session's
+  6.5), `1` for Daily, `~0.143` for Weekly (7 days). This feeds the dollar-volume
+  guardrail (IV.8) only; it is not engine math.
+- **RelVol and OBV are unchanged** — both are bar-relative (5-bar vs 20-bar, cumulative
+  signed volume), so 24/7 bars flow through with no session assumption.
+- **Volume-quality caveat (published):** *reported crypto volume is unreliable — wash
+  trading and fragmented exchanges inflate it. The Volume family is therefore
+  **down-weighted** for crypto (IV.4) and its readings are the least trustworthy input in
+  a crypto plan.*
+
+## IV.8 Universe guardrails (crypto)
+
+- **No price floor** (equities reject `< $2`; legitimate coins trade far below a dollar).
+- **Dollar-volume floor** stays (default `$1M/day`, computed on reported volume with
+  `perDayFactor = 24`) to keep the engine off dead micro-caps — with the IV.7 caveat that
+  the volume figure itself is soft.
+
+## IV.9 Worked example — end to end
+
+Hypothetical coin **COINX-USD**, **Daily** timeframe, `CRYPTO_CONFIG`. Family scores
+(same component votes as the II.9 equity example, for comparison): Trend **+0.80**,
+Momentum **+0.90**, Volume **+0.50** (RelVol thin → `thin` flag), Structure **+0.60**.
+
+**Composite** (crypto Daily weights .40/.30/.10/.20):
+
+```
+S = .40(.80) + .30(.90) + .10(.50) + .20(.60)
+  = .320 + .270 + .050 + .120 = +0.76   →  G1: LONG
+```
+
+**Confidence:** base = 35 + 0.76×75 = 92. Penalties: **thin volume −5** (no earnings
+penalty — G5 off). C = **87** (HIGH) → G2 pass.
+
+**Readings:** close 100.00 · ATR 5.00 · support 96.00 · resistance 112.00.
+
+**Stop:** structStop = 96.00 − 0.60(5.00) = 93.00. Cap: 100 − 3.0(5.00) = 85.00 →
+max(93.00, 85.00) = 93.00. Floor: 100 − 1.0(5.00) = 95.00 → min(93.00, 95.00) = **93.00**.
+Risk = 7.00 (7.0%).
+
+**Target:** structure check (112.00 − 100.00)/7.00 = 1.71 ≥ 1.4 → target = **112.00**,
+basis "structure level." Reward = 12.00 (12.0%). **RR = 1.71** → G3 pass.
+
+**G4:** 0.87 × 1.71 − 0.13 = 1.36 ≥ 0.25 → pass. **G5:** off (crypto, no earnings) → pass.
+
+**Emitted:** LONG COINX-USD · entry 100.00 · stop 93.00 (−7.0%) · target 112.00 (+12.0%) ·
+1.71:1 · confidence 87 with one itemized penalty (thin volume −5). **Fractional sizing** at
+$25,000 / 1%: risk $250 / 7.00 = **35.714285 units** (quantized to 1e-6). *For a $60,000
+coin with a $4,200 stop distance the same $250 risk sizes **0.059523 units** — non-zero,
+where whole-unit flooring would have shown 0.*
+
+*Counterfactual:* same coin but ADX 15 (choppy) and Momentum bearish at −0.40: Trend →
+1.0×0.5 = 0.50; S = .40(.50) − .30(.40) + .10(.50) + .20(.60) = .20 − .12 + .05 + .12 =
++0.25 → still LONG at G1, but confidence = 35 + 18.75 = 53.8, then −12 choppy, −8 dissent,
+−5 thin = **29 → G2 fails (C < 35): NO TRADE** — "conviction floor — choppy tape and
+momentum dissent." The refusal behavior is identical to equities.
+
+> The worked-example outputs are the illustrative result of the Part I–II math under
+> `CRYPTO_CONFIG`; the Phase-1 fixture reproduces them exactly and is regenerated from the
+> verified engine output. The binding items are the **constants, gate behavior, and sizing
+> rule** — not the rounded digits.
+
+## IV.10 Limitations — crypto
+
+Published verbatim at `/methodology/crypto/limitations`, in addition to every Part II
+limitation (which still applies):
+
+1. **Extreme volatility.** Crypto moves far more than equities; ATR-sized stops are wider,
+   but a violent regime break blows through any backward-looking stop.
+2. **24/7 with weekend/holiday gap risk.** There is no close, but liquidity thins on
+   weekends and a gap can jump a stop — the modeled stop is not a guaranteed fill.
+3. **Unreliable volume.** Reported volume is inflated by wash trading and fragmented across
+   venues; the Volume family is down-weighted and its readings are the softest input.
+4. **No fundamentals, no earnings.** There is no P/E, dividend, or earnings calendar; the
+   only event-awareness equities have (G5) does not exist for crypto yet.
+5. **Free, delayed data on a limited coin set.** Yahoo's crypto coverage is delayed and
+   narrower than a dedicated exchange feed; a paid crypto feed (real-time, full universe,
+   better volume) is a future upgrade behind the same provider seam.
+6. **Un-calibrated priors.** The `CRYPTO_CONFIG` constants are reasoned, not measured;
+   until a crypto backtest runs, confidence is "signal agreement," never a win rate.
+7. **Nothing here is financial advice.** Crypto is higher-risk than equities. The engine
+   reports technical structure and defined-risk arithmetic; the decision, and the risk,
+   belong to the user.
