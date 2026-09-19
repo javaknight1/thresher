@@ -434,6 +434,11 @@ constraints (snapped to the nearest listed value). Refusals stay **200** bodies 
     "expiration": "2026-07-18", "dte": 35,
     "netDebit": 4.30, "maxLoss": 430, "maxGain": 570, "breakevens": [189.30],
     "greeks": { "delta": 0.24, "gamma": 0.010, "theta": -0.06, "vega": 0.12, "rho": 0.03 },
+    "exitPlan": {                          // when to get out (Part III.9)
+      "stopUnderlying": 181.10, "stopOptionValue": 1.90, "modeledStopLoss": 240,
+      "targetUnderlying": 201.75, "targetOptionValue": 10.00, "modeledGain": 570,
+      "timeStopDte": 21, "premiumStopPct": null   // null for spreads; 0.50 for long single legs
+    },
     "expectedReturn": { "evR": 0.41, "calibrated": false },   // illustrative (Part III.6)
     "probabilityOfProfit": { "value": 0.38, "modelBased": true },
     "confidence": { "score": 71, "bucket": "high", "penalties": [] },

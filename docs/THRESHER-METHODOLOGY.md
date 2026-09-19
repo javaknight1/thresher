@@ -15,7 +15,7 @@ Companion to `THRESHER-DESIGN.md`. Version 1.1 (adds **Part III — Options**, p
 /methodology/engine/{slug}      → families, weights, composite, confidence,
                                   stops, targets, gates, sizing
 /methodology/options/{slug}     → delta, gamma, theta, vega, rho, pricing,
-                                  strategies, gates, limitations (Part III)
+                                  strategies, exits, gates, limitations (Part III)
 /methodology/example            → worked end-to-end trade derivation
 /methodology/limitations        → what this engine cannot see
 ```
@@ -584,7 +584,7 @@ with `N(·)` the standard-normal CDF and `n(·)` its PDF.
 2. **Flat, static IV.** Each contract is priced at its own quoted IV; the engine does
    **not** model a volatility surface or IV changes over the holding period. Every
    forward-looking number in Part III therefore assumes *IV as quoted now* — stated
-   in the honest labels (III.6, III.13).
+   in the honest labels (III.6, III.14).
 
 **Time uses calendar days, not trading days** (`/365`), matching how brokers quote
 DTE. A theta expressed *per calendar day* (III.2) is consistent with this.
@@ -653,7 +653,7 @@ premium at risk.
 *What it means:* the dollar change per **1 percentage point** change in implied
 volatility. *What to look for:* vega is **largest for longer-dated, at-the-money**
 options. Long options are **long vega** (helped when IV rises); because v1 has **no IV
-history**, it cannot tell you whether IV is cheap or rich (III.9) — so vega is shown
+history**, it cannot tell you whether IV is cheap or rich (III.10) — so vega is shown
 and taught, but never traded *on* in v1.
 
 ### Rho (ρ) — interest-rate exposure, **per 1 rate point**
@@ -689,7 +689,7 @@ POP_long_call = N(d2(B))      POP_long_put = N(−d2(B))
 ```
 
 For **defined-risk spreads**, POP = risk-neutral `P` of finishing on the profitable
-side of the structure's breakeven (III.10 gives each structure's breakeven).
+side of the structure's breakeven (III.11 gives each structure's breakeven).
 
 **The binding label (rendered wherever POP appears):**
 
@@ -744,8 +744,8 @@ stop** (III.6), it requires that the equity engine *emitted a plan* — i.e. pas
 of G1–G5. If the equity read produced no trade, there is no thesis to express in
 options, and Part III refuses at **OG3** (never a 500). Non-directional strategies
 (long straddle/strangle, iron condor/butterfly) express a **volatility** view, which
-requires an IV-regime read the free feed cannot provide (III.9); they are **defined
-and taught** in III.10 but are **not selectable in v1**.
+requires an IV-regime read the free feed cannot provide (III.10); they are **defined
+and taught** in III.11 but are **not selectable in v1**.
 
 The equity confidence `C` carries through as the conviction driving both the scenario
 probability `p = C/100` (III.6) and the options confidence base (III.7) — the *same*
@@ -770,7 +770,7 @@ EV_R    = EV$ / riskCapital                        (expected return on capital a
 ```
 
 where `entryValue` = net debit (long/debit) or net credit received (short/credit), and
-`riskCapital` = the structure's **defined max loss** (III.10). For a long single leg,
+`riskCapital` = the structure's **defined max loss** (III.11). For a long single leg,
 `entryValue = riskCapital = premium`, so `EV_R = EV$ / premium` — an expected **return
 on premium**.
 
@@ -828,10 +828,10 @@ rate — identical to the equity contract.
 
 For the inherited intent, the engine builds a **candidate universe**: every liquid
 single-leg contract (calls for bullish, puts for bearish) that clears III.4 and the
-DTE window (OG2), **plus** every constructible directional strategy from III.10
+DTE window (OG2), **plus** every constructible directional strategy from III.11
 (debit/credit verticals, LEAPS, cash-secured put / covered-call overlay). Each
 candidate carries: `EV_R` (III.6), `Conf` (III.7), `POP` (III.3), and its defined-risk
-payoff (III.10).
+payoff (III.11).
 
 **Rank score** — expected edge weighted by conviction (return *on risk*, so the ranker
 prefers capital efficiency, consistent with the equity engine ranking in R-multiples,
@@ -843,8 +843,10 @@ tie-breakers, in order:  higher POP  →  tighter spreadPct  →  fewer legs (si
 ```
 
 The **best trade** is the top-ranked candidate that also passes **all** OG gates
-(III.9). If the top candidate fails a gate it is dropped and the next is considered;
-if none survive, the whole analysis is a refusal naming the last binding gate.
+(III.10). If the top candidate fails a gate it is dropped and the next is considered;
+if none survive, the whole analysis is a refusal naming the last binding gate. The
+emitted best trade always carries its **exit plan** (III.9) — the stop, target, and
+time stop that tell the user when to get out.
 
 **Constrained queries** ("best trade **at this price**", "**at this expiration**") are
 the *same* pipeline with the candidate universe pre-filtered:
@@ -859,7 +861,64 @@ illiquid (OG1), outside the DTE window (OG2), or clears no expected-value margin
 
 ---
 
-## III.9 The options refusal gates — OG1 … OG5
+## III.9 The exit plan — stops, target, and time stop
+
+A defined-risk structure already bounds the worst case at its **max loss** (III.11
+payoffs) if held to expiration — but the engine never assumes you hold to zero. Every
+emitted options trade carries an **exit plan**: concrete triggers for *when to get
+out*, the options analog of the equity stop/target (II.5–II.6). All three are derived
+from the equity plan and the option's own greeks, so they inherit the same
+invalidation logic (II.5) — the trade's reason *is* the equity read.
+
+**1. Underlying stop — thesis invalidation (primary).**
+When the underlying trades to the equity **stop**, the reason for the trade is gone;
+close the option. The engine re-prices the structure at that trigger (BSM at
+`S = equityStop`, time decayed to the expected exit) so the user gets a concrete
+"exit-at" premium and the modeled loss:
+
+```
+stopUnderlying   = equityStop
+stopOptionValue  = BSM(structure, S = equityStop, T = T − holdingDays/365, σ)   [mid, modeled]
+modeledStopLoss  = entryValue − stopOptionValue        (≤ maxLoss by construction)
+```
+
+**2. Underlying target — profit exit.**
+Symmetrically, when the underlying reaches the equity **target**, take profit. Capped
+structures (verticals) value at their structural max:
+
+```
+targetUnderlying  = equityTarget
+targetOptionValue = min( BSM(structure, S = equityTarget, T − holdingDays/365, σ),  structureMaxValue )
+modeledGain       = targetOptionValue − entryValue
+```
+
+**3. Time stop — options-specific.**
+Theta accelerates and gamma/assignment risk spike into expiry, so the engine sets a
+**time stop**: manage or close the trade at a fixed days-to-expiration regardless of
+price, or when the equity horizon is reached — whichever comes first:
+
+```
+timeStopDte = min( exit.timeStopDte (21),  DTE_at_entry − horizonDays )
+```
+
+**4. Premium hard-stop (companion, long single legs only).**
+As a simpler backstop for a **long single-leg** option, the engine also states a
+premium stop at `exit.premiumStopPct` = **50%** of debit — exit if the option loses
+half its premium before the underlying stop is tagged. Defined-risk **spreads** skip
+this: their max loss is already bounded and usually small, so they rely on the
+underlying stop + max loss.
+
+**Honesty.** `stopOptionValue` / `targetOptionValue` are **modeled** (static-IV BSM at
+the trigger; real fills move with the vol surface and the path) and carry the III.14
+label. The **max loss** is the only hard, path-independent number — a gap can blow
+through the underlying stop, and the defined max loss is what actually caps the
+downside. The exit plan is disciplined-exit *guidance*, not a guaranteed fill.
+
+Config: `exit { timeStopDte 21, premiumStopPct 0.50 }` (III.13).
+
+---
+
+## III.10 The options refusal gates — OG1 … OG5
 
 Ordered short-circuit, exactly like G1–G5: evaluated in order, the response names the
 **first** failure and its reason string. Cheapest/broadest structural checks first,
@@ -889,11 +948,11 @@ ivRank = { status: 'unavailable', reason: 'no IV history on the free data feed' 
 
 and the UI renders **"IV Rank — unavailable (free data)."** The engine **never
 fabricates** an IV series. When a paid feed with IV history lands, `ivRank` becomes a
-real number and unlocks the IV-regime gate and the non-directional strategies (III.10).
+real number and unlocks the IV-regime gate and the non-directional strategies (III.11).
 
 ---
 
-## III.10 The strategy library
+## III.11 The strategy library
 
 Greeks are **additive across legs** (a two-leg position's delta is the sum of its
 legs' deltas, etc.) — a clean invariant the tests assert. Each structure below lists
@@ -916,7 +975,7 @@ bands, not magic numbers.
 | **LEAPS** | +1 long-dated call/put | position-horizon conviction; stock replacement | DTE ≥ **365**; deep-ITM Δ in `leapsDeltaBand` **0.70–0.85** (minimize extrinsic/theta) | loss = premium · (call) unbounded gain / (put) K − premium · BE = K ± premium |
 
 **Non-directional — defined & taught, NOT selectable in v1** (need an IV-regime read,
-III.9): **Long Straddle / Strangle** (long vol — profits on a large move either way;
+III.10): **Long Straddle / Strangle** (long vol — profits on a large move either way;
 BE = K ± total premium), **Iron Condor** and **Iron Butterfly** (short vol, range-bound
 — defined risk from two credit spreads). These render on the education pages with full
 payoff math and are labeled *"requires an IV-regime read (IV Rank), unavailable on the
@@ -926,11 +985,11 @@ trade in v1.
 **Selection is numeric, not hardcoded.** The priors above (which structure "fits" a
 setup) seed *which* candidates get built; the **ranker (III.8) decides the winner** by
 `EV_R · Conf`. There is no "always pick a long call" rule — a debit spread frequently
-wins when the equity target sits near a sensible short strike (see III.11).
+wins when the equity target sits near a sensible short strike (see III.12).
 
 ---
 
-## III.11 Worked example — end to end
+## III.12 Worked example — end to end
 
 Reuses the **QQXR** equity result from II.9: **LONG**, `C = 86`, entry **84.60**, stop
 **80.96**, target **91.88**. Options context passed in: `r = 0.04`, `q = 0`, an
@@ -961,6 +1020,13 @@ OG5 no earnings ✓ → **emitted**.
 $179 · max gain $321 · breakeven 86.79 · illustrative expected return +140% on risk ·
 model-based POP 39% · signal agreement 86.*
 
+**Exit plan (III.9):** *stop — exit if QQXR trades to **80.96** (the equity
+invalidation); the spread is modeled near ~$0.20 there, a ~$159 loss (hard cap $179).
+Target — take profit at QQXR **91.88**, where the spread is at its **$5.00** max
+(+$321). Time stop — **21 DTE** (min of 21 and 35 − 10 swing horizon): manage/close
+regardless of price. No separate premium stop (defined-risk spread; the $179 max loss
+is the floor).*
+
 **Counterfactual:** the II.9 counterfactual equity read **refused at G2** (`C = 29`, no
 plan emitted). With no underlying edge, Part III refuses at **OG3**: *"no underlying
 edge — the equity read produced no trade to express."* No chain is even scored. This is
@@ -975,7 +1041,7 @@ declined.**
 
 ---
 
-## III.12 Constants (proposed — the versioned options config)
+## III.13 Constants (proposed — the versioned options config)
 
 All live in `packages/options-engine/src/config.ts` behind `OPTIONS_ENGINE_VERSION`
 (proposed **`0.1.0`** — beta, unshipped) and `optionsConfigHash`:
@@ -992,6 +1058,7 @@ og3.minEquityConfidence 35            og4.evMargin 0.20
 confidence.penalties  { wideSpread 5, thetaBurden 8, lowDelta 10, earnings 8, assignment 6 }
 thetaBurdenMax 0.50                   horizonDays { intraday 2, swing 10, position 40 }
 confidence.buckets      (reuse equity: HIGH ≥ 70, MODERATE ≥ 45, else LOW)
+exit { timeStopDte 21, premiumStopPct 0.50 }   (the exit plan, III.9)
 rank  EV_R · (Conf/100), tie-break POP ↓ then spread ↑ then legs ↑
 ```
 
@@ -1001,7 +1068,7 @@ page says so.
 
 ---
 
-## III.13 Limitations — what options analysis cannot see
+## III.14 Limitations — what options analysis cannot see
 
 Published verbatim at `/methodology/options/limitations`, in addition to every Part II
 limitation (which still applies to the underlying read):
@@ -1016,7 +1083,7 @@ limitation (which still applies to the underlying read):
    approximated away and only flagged; deep-ITM near dividends is where this matters.
 4. **No volatility view on free data.** Without IV history there is no IV Rank, so the
    engine cannot say IV is cheap or rich, will not sell/buy premium *on volatility*,
-   and does not offer non-directional strategies in v1 (III.9–III.10).
+   and does not offer non-directional strategies in v1 (III.10–III.11).
 5. **Static-IV, hold-to-expiration assumption.** Real P/L depends on the path and on IV
    changes the model ignores; a mid-life exit can differ materially from the intrinsic
    scenarios in III.6.
