@@ -30,6 +30,7 @@ const NAV: Item[] = [
   { id: 'nav-brokerage', label: 'Brokerages', href: '/brokerage', group: 'Go to' },
   { id: 'nav-guide', label: 'Guide', href: '/guide', group: 'Go to' },
   { id: 'nav-methodology', label: 'Methodology', href: '/methodology', group: 'Go to' },
+  { id: 'nav-settings', label: 'Settings', href: '/settings', group: 'Go to' },
 ];
 
 const METHODOLOGY: Item[] = [
