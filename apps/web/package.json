@@ -25,20 +25,20 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.4",
     "lightweight-charts": "^5.2.1",
-    "next": "^15.5.25",
+    "next": "^16.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "yahoo-finance2": "^3.15.2"
+    "yahoo-finance2": "^4.0.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.5.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.6",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.1",
     "wrangler": "^4.131.1"
   }
 }
