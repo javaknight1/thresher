@@ -24,6 +24,7 @@ import ShareButton from './ShareButton';
 import PageHero from './PageHero';
 import { ScanBoardSkeleton } from './Skeleton';
 import { useFollows } from '../lib/follows-client';
+import { usePrefs } from '../lib/prefs';
 import styles from '../app/page.module.css';
 
 type View = 'top' | 'following' | Timeframe;
@@ -107,10 +108,33 @@ function ScanView() {
 
   const selectView = useCallback((v: View) => setView(v), []);
 
+  // Board defaults from prefs: only when the URL pins NOTHING (a shared link is
+  // authoritative). `ready` gates the first board fetch so applying prefs never
+  // triggers a wasted second scan.
+  const { prefs, loaded: prefsLoaded } = usePrefs();
+  const [ready, setReady] = useState(false);
+  const anyBoardParam = ['tab', 'dir', 'minrr', 'sort'].some(
+    (k) => searchParams.get(k) !== null,
+  );
+  useEffect(() => {
+    if (ready) return;
+    if (anyBoardParam) {
+      setReady(true);
+      return;
+    }
+    if (!prefsLoaded) return;
+    if (isView(prefs.boardTab)) setView(prefs.boardTab);
+    if (isDirection(prefs.boardDirection)) setDirection(prefs.boardDirection);
+    if ((RR_FLOORS as readonly number[]).includes(prefs.boardMinRR)) setMinRR(prefs.boardMinRR);
+    if (isSort(prefs.boardSort)) setSort(prefs.boardSort);
+    setReady(true);
+  }, [ready, anyBoardParam, prefsLoaded, prefs]);
+
   // Reflect view + filters in the URL (shareable, reload-stable).
   useEffect(() => {
+    if (!ready) return;
     router.replace(boardUrl(view, direction, minRR, sort), { scroll: false });
-  }, [view, direction, minRR, sort, router]);
+  }, [ready, view, direction, minRR, sort, router]);
 
   const loadBoard = useCallback(async (v: View, force = false) => {
     setLoading(true);
@@ -149,8 +173,9 @@ function ScanView() {
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
     void loadBoard(view);
-  }, [view, loadBoard]);
+  }, [ready, view, loadBoard]);
 
   // The "Following" view narrows the aggregated board to the user's follows.
   const { symbols: followed } = useFollows();

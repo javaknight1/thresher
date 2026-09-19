@@ -2,54 +2,48 @@
 
 /**
  * Position-sizing calculator — turns a plan's entry/stop plus the user's account
- * size and per-trade risk into a concrete share count. Inputs persist in
- * localStorage (per browser) so they carry across analyses without a database.
+ * size and per-trade risk into a concrete share count. Inputs live in the shared
+ * prefs store (lib/prefs): Clerk metadata when signed in (so they follow you
+ * across devices), localStorage otherwise. Settable here or on /settings.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { positionSize } from '../lib/position-size';
+import { usePrefs } from '../lib/prefs';
 import styles from './PositionSizer.module.css';
 
 const RISK_OPTIONS = [0.5, 1, 2, 3] as const;
-const ACCOUNT_KEY = 'thresher:accountSize';
-const RISK_KEY = 'thresher:riskPct';
+// Pre-prefs per-browser keys; migrated once into prefs below.
+const LEGACY_ACCOUNT_KEY = 'thresher:accountSize';
+const LEGACY_RISK_KEY = 'thresher:riskPct';
 
 const money = (x: number) => `$${Math.round(x).toLocaleString()}`;
 const pct = (fraction: number) => `${(fraction * 100).toFixed(1)}%`;
 
 export default function PositionSizer({ entry, stop }: { entry: number; stop: number }) {
-  const [account, setAccount] = useState('');
-  const [riskPct, setRiskPct] = useState(1);
+  const { prefs, loaded, setPref, setPrefs } = usePrefs();
+  const account = prefs.accountSize;
+  const riskPct = prefs.riskPct;
 
-  // Load saved inputs after mount (avoids a hydration mismatch).
+  // One-time migration of the old per-browser sizer keys into prefs.
+  const migrated = useRef(false);
   useEffect(() => {
+    if (!loaded || migrated.current) return;
+    migrated.current = true;
+    if (prefs.accountSize) return; // already set — nothing to migrate
     try {
-      const a = localStorage.getItem(ACCOUNT_KEY);
-      const r = localStorage.getItem(RISK_KEY);
-      if (a) setAccount(a);
-      if (r && Number(r) > 0) setRiskPct(Number(r));
+      const a = localStorage.getItem(LEGACY_ACCOUNT_KEY);
+      const r = localStorage.getItem(LEGACY_RISK_KEY);
+      const patch: Partial<typeof prefs> = {};
+      if (a) patch.accountSize = a.replace(/[^0-9.]/g, '');
+      if (r && Number(r) > 0) patch.riskPct = Number(r);
+      if (Object.keys(patch).length) setPrefs(patch);
     } catch {
-      // localStorage unavailable — fine, just no persistence
+      /* localStorage unavailable — fine */
     }
-  }, []);
+  }, [loaded, prefs.accountSize, setPrefs]);
 
-  const onAccount = (raw: string) => {
-    const clean = raw.replace(/[^0-9.]/g, '');
-    setAccount(clean);
-    try {
-      localStorage.setItem(ACCOUNT_KEY, clean);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const onRisk = (r: number) => {
-    setRiskPct(r);
-    try {
-      localStorage.setItem(RISK_KEY, String(r));
-    } catch {
-      /* ignore */
-    }
-  };
+  const onAccount = (raw: string) => setPref('accountSize', raw.replace(/[^0-9.]/g, ''));
+  const onRisk = (r: number) => setPref('riskPct', r);
 
   const accountSize = Number(account);
   const result = positionSize({ accountSize, riskPct, entry, stop });

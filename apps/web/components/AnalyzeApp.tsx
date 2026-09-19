@@ -17,6 +17,7 @@ import type {
   ProfileResponse,
 } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
+import { usePrefs } from '../lib/prefs';
 import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
 import Controls from './Controls';
 import TradeCard from './TradeCard';
@@ -67,6 +68,21 @@ export default function AnalyzeApp() {
   });
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
   const [data, setData] = useState<AnalyzeData | null>(null);
+
+  // On a fresh /analyze visit (no symbol or timeframe in the URL), apply the
+  // user's default-timeframe pref once it hydrates. A shared/deep link that
+  // pins either one wins, so this never overrides an explicit choice.
+  const { prefs, loaded: prefsLoaded } = usePrefs();
+  const appliedTfPref = useRef(false);
+  useEffect(() => {
+    if (!prefsLoaded || appliedTfPref.current) return;
+    appliedTfPref.current = true;
+    const hasUrlTf = isTimeframe(searchParams.get('timeframe'));
+    const hasUrlSymbol = Boolean(searchParams.get('symbol'));
+    if (!hasUrlTf && !hasUrlSymbol && prefs.defaultTimeframe !== timeframe) {
+      setTimeframe(prefs.defaultTimeframe);
+    }
+  }, [prefsLoaded, prefs.defaultTimeframe, searchParams, timeframe]);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [profileFailed, setProfileFailed] = useState(false);
   const [error, setError] = useState<ErrorState | null>(null);
