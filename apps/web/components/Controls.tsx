@@ -37,6 +37,21 @@ function sanitize(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z.-]/g, '');
 }
 
+/**
+ * Coarse "how long ago" for the freshness stamp — "just now" / "45m ago" /
+ * "3h ago" / "2d ago". Client-only (uses the wall clock); recomputes whenever
+ * Controls re-renders (i.e. on each new analysis), which is fresh enough here.
+ */
+function relativeSince(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 60_000) return 'just now';
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export default function Controls({
   onAnalyze,
   timeframe,
@@ -121,10 +136,13 @@ export default function Controls({
         {freshness && (
           <span data-testid="freshness" className={`mono ${styles.freshness}`}>
             data as of{' '}
-            {new Date(freshness.dataFreshness).toLocaleTimeString([], {
+            {new Date(freshness.dataFreshness).toLocaleString([], {
+              month: 'short',
+              day: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
-            })}
+            })}{' '}
+            · {relativeSince(freshness.dataFreshness)}
             {freshness.stale && <span className={styles.staleTag}>STALE</span>}
           </span>
         )}
