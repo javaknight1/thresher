@@ -12,7 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import AuthNav from './AuthNav';
 import Brandmark from './Brandmark';
 import CommandPalette from './CommandPalette';
-import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage, IconSettings } from './icons';
+import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage } from './icons';
 import styles from './SiteHeader.module.css';
 
 function openPalette() {
@@ -29,7 +29,6 @@ const LINKS = [
   { href: '/leaderboard', label: 'Leaderboard', Icon: IconLeaderboard, testid: 'nav-leaderboard' },
   { href: '/analyze', label: 'Search', Icon: IconSearch, testid: 'nav-search' },
   { href: '/brokerage', label: 'Brokerage', Icon: IconBrokerage, testid: 'nav-brokerage' },
-  { href: '/settings', label: 'Settings', Icon: IconSettings, testid: 'nav-settings' },
 ] as const;
 
 export default function SiteHeader({ showBack = false }: SiteHeaderProps) {

@@ -7,12 +7,24 @@
  */
 import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
 import { authEnabled } from '../lib/auth';
+import { IconSettings } from './icons';
 
 function AuthNavInner() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return null;
   return isSignedIn ? (
-    <UserButton />
+    <UserButton>
+      {/* Settings lives in the account menu (top-right), not the primary nav. */}
+      <UserButton.MenuItems>
+        <UserButton.Link
+          label="Settings"
+          labelIcon={<IconSettings width={16} height={16} />}
+          href="/settings"
+        />
+        <UserButton.Action label="manageAccount" />
+        <UserButton.Action label="signOut" />
+      </UserButton.MenuItems>
+    </UserButton>
   ) : (
     <SignInButton mode="modal">
       <button className="deep-link mono" data-testid="sign-in">
