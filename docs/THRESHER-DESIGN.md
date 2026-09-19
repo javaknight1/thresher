@@ -22,7 +22,12 @@ A user enters a ticker and picks a timeframe. The engine returns one of two thin
 - No order execution, no brokerage connection. Read-only, advisory output.
 - No return predictions. It reports the *math of a defined-risk setup* (what you gain if target hits, what you lose if stop hits), never "this stock will go up X%."
 - No uncalibrated probability claims. Until the backtest pipeline (§7) produces real per-bucket win rates, confidence is labeled as a *signal-agreement score*, not a win probability.
-- No options, futures, or crypto in v1. US equities and ETFs only.
+- No futures or crypto. US equities and ETFs only.
+- **Options were excluded from v1** and are now a **net-new post-M4 milestone (M5)** —
+  a separate pure `packages/options-engine` that *consumes* the equity read and returns
+  a single best defined-risk options trade. Its binding math is **methodology Part III**
+  (proposed/awaiting sign-off); its API contract is `GET /api/v1/options` (§8). The
+  equity engine remains the core and never depends on the options engine.
 
 ### 1.3 Design principles
 
@@ -402,6 +407,46 @@ Storage: `backtest_runs`, `setups`, `outcomes`, `calibration` tables in Supabase
 }
 ```
 
+### 8.1 Options (M5, net-new) — methodology Part III
+
+`GET /api/v1/options?symbol=NVDA&timeframe=swing[&strike=190][&expiration=2026-08-21]`
+
+Optional `strike` / `expiration` are the "at this price / at this expiration"
+constraints (snapped to the nearest listed value). Refusals stay **200** bodies with a
+`refusal`, exactly like `/analyze`.
+
+```jsonc
+{
+  "symbol": "NVDA",
+  "timeframe": "swing",
+  "asOf": "2026-06-10T20:00:00Z",
+  "dataFreshness": "2026-06-10T20:00:00Z",
+  "optionsEngineVersion": "0.1.0",
+  "optionsConfigHash": "b7d0e2",
+  "underlyingPrice": 187.42,
+  "equityRead": { "direction": "long", "confidence": 71 },   // echoed input (never recomputed)
+  "ivRank": { "status": "unavailable", "reason": "no IV history on the free data feed" },
+  "bestTrade": {                        // null when refused
+    "strategy": "bull_call_spread",
+    "side": "buy", "type": "call",
+    "legs": [ { "action": "buy",  "type": "call", "strike": 185, "expiration": "2026-07-18" },
+              { "action": "sell", "type": "call", "strike": 195, "expiration": "2026-07-18" } ],
+    "expiration": "2026-07-18", "dte": 35,
+    "netDebit": 4.30, "maxLoss": 430, "maxGain": 570, "breakevens": [189.30],
+    "greeks": { "delta": 0.24, "gamma": 0.010, "theta": -0.06, "vega": 0.12, "rho": 0.03 },
+    "expectedReturn": { "evR": 0.41, "calibrated": false },   // illustrative (Part III.6)
+    "probabilityOfProfit": { "value": 0.38, "modelBased": true },
+    "confidence": { "score": 71, "bucket": "high", "penalties": [] },
+    "reasoning": "Target sits above the short strike, so the spread captures full width…"
+  },
+  "candidates": [ /* ranked; each same shape as bestTrade, for the strategies section */ ],
+  "gates": [{ "gate": "OG1", "pass": true }, /* …OG2–OG5 */],
+  "refusal": null,                      // { "gate": "OG3", "reason": "no underlying edge…" }
+  "greeksEducation": { "delta": "…", "gamma": "…", "theta": "…", "vega": "…", "rho": "…" },
+  "story": "With NVDA LONG on the swing read, the cleanest options expression is…"
+}
+```
+
 Errors: `404 UNKNOWN_SYMBOL`, `429 RATE_LIMITED` (with reset), `503 DATA_UNAVAILABLE` (with stale-data fallback when possible).
 
 ---
@@ -426,6 +471,13 @@ Errors: `404 UNKNOWN_SYMBOL`, `429 RATE_LIMITED` (with reset), `503 DATA_UNAVAIL
 - **M2 — Accounts:** Clerk, watchlists, Scan page, saved analyses, History recording (unlabeled).
 - **M3 — Honesty board:** outcome labeler cron, History page with hit rates.
 - **M4 — Calibration:** backtest pipeline, calibrated probabilities in UI, threshold tuning, T1/T2 scale-outs, entry zones.
+- **M5 — Options (net-new):** pure `packages/options-engine` (Black-Scholes greeks,
+  contract scorer, ordered `OG` refusal gates, full defined-risk strategy library) per
+  **methodology Part III**; `GET /api/v1/options?symbol=&timeframe=&strike?=&expiration?=`
+  returning the single best trade + greeks education + payoff; an `/options` page
+  mirroring Analyze. Free-Yahoo chains + self-computed greeks; "IV Rank unavailable"
+  until a paid IV-history feed. Phase 0 (Part III sign-off) is a hard gate before any
+  engine code.
 
 ## 11. Open questions
 

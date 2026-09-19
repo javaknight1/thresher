@@ -2,11 +2,11 @@
 
 **Every number the engine produces, derived from first principles.**
 
-This document serves two purposes: it is the implementation spec for `packages/engine`, and it is the source content for the public `/methodology` documentation pages. If a calculation isn't in this document, the engine doesn't do it.
+This document serves two purposes: it is the implementation spec for `packages/engine` (Parts I–II) and the future `packages/options-engine` (Part III), and it is the source content for the public `/methodology` documentation pages. If a calculation isn't in this document, the engine doesn't do it.
 
-Companion to `THRESHER-DESIGN.md`. Version 1.0.
+Companion to `THRESHER-DESIGN.md`. Version 1.1 (adds **Part III — Options**, proposed/awaiting sign-off).
 
-**Docs site structure** (each Part I/II section below = one page):
+**Docs site structure** (each Part I/II/III section below = one page):
 
 ```
 /methodology                    → overview + pipeline diagram
@@ -14,6 +14,8 @@ Companion to `THRESHER-DESIGN.md`. Version 1.0.
                                   relative-volume, bollinger, pivots
 /methodology/engine/{slug}      → families, weights, composite, confidence,
                                   stops, targets, gates, sizing
+/methodology/options/{slug}     → delta, gamma, theta, vega, rho, pricing,
+                                  strategies, gates, limitations (Part III)
 /methodology/example            → worked end-to-end trade derivation
 /methodology/limitations        → what this engine cannot see
 ```
@@ -511,3 +513,518 @@ The honesty page. Published verbatim at `/methodology/limitations`:
 5. **No execution modeling in v1:** slippage, spreads, and commissions are not in the R:R math. Real results will be worse than displayed math by those costs; the History page will measure the gap.
 6. **Free-data caveats:** Yahoo volume and intraday bars carry quality issues (design doc §11.4); every response carries its data timestamp.
 7. **Nothing here is financial advice.** The engine reports the technical structure and the arithmetic of a defined-risk setup. The decision, and the risk, belong to the user.
+
+---
+
+# Part III — Options analysis
+
+> **Status: PROPOSED — awaiting sign-off.** Everything in Part III is the
+> *binding spec* for the future `packages/options-engine`, authored here **before**
+> any engine code (project rule: the doc defines the math; code never invents it).
+> Until this Part is signed off, no options engine code is written. Once signed off,
+> if code and this Part disagree, **this Part wins**.
+
+The equity engine (Parts I–II) answers *"is there a trade in the underlying, and what
+is its defined-risk shape?"* Part III **extends** that answer into the option chain:
+given the same ticker + timeframe, it reads every liquid strike × expiration through
+the greeks and returns **the single best options trade to express the equity read** —
+side (buy/sell), type (call/put), expiration, strike(s) — with an *illustrative*
+expected return, a **model-based** probability of profit, an options "signal
+agreement" confidence, and a full defined-risk payoff. Or an honest refusal.
+
+**The one-way dependency (do not violate):** the options engine **consumes** the
+equity `AnalysisResult` as an input value — direction, confidence, composite,
+families, and the emitted plan (entry/stop/target). It **never recomputes technical
+analysis** and the equity engine never depends on the options engine. This is what
+keeps both engines pure, independently versioned, and independently replayable by the
+backtester.
+
+**Purity, exactly as Part I–II:** `analyzeOptions(chain, equityRead, config, ctx)` is
+a pure function. Spot, per-contract IV, days-to-expiry, the risk-free rate, the
+dividend yield, the equity read, and "now" are **all passed in** — no I/O, no
+`Date.now()`. Every score component emits a `Detail{ok, text}` reason string; all
+numbers live in `packages/options-engine/src/config.ts` behind
+`OPTIONS_ENGINE_VERSION` + a deterministic `optionsConfigHash` (the same `fnv1a`
+pattern as the equity `config.ts`), stamped into every result. Refusals are
+first-class `{gate, reason}`, never thrown.
+
+---
+
+## III.1 The pricing model — Black-Scholes-Merton
+
+Every greek and price in Part III comes from one model: **Black-Scholes-Merton** with
+a continuous dividend yield (the Merton extension). All inputs are passed in:
+
+| Symbol | Meaning | Source (passed in) |
+|---|---|---|
+| `S` | underlying spot price | `chain.underlyingPrice` |
+| `K` | strike | per contract |
+| `T` | time to expiry, **in years** | `(expiration − ctx.now) / 365` (calendar days ÷ 365) |
+| `σ` | implied volatility (annualized) | per contract, from the chain (`impliedVolatility`) |
+| `r` | risk-free rate (annualized, continuous) | config constant `riskFreeRate` = **0.04** |
+| `q` | continuous dividend yield | `getProfile().fundamentals.dividendYield` (default **0**) |
+
+```
+d1 = [ ln(S/K) + (r − q + σ²/2) · T ] / (σ · √T)
+d2 = d1 − σ · √T
+```
+
+with `N(·)` the standard-normal CDF and `n(·)` its PDF.
+
+**Two documented approximations (v1):**
+
+1. **European pricing of American options.** Listed US equity options are
+   American-style (early exercise allowed); BSM prices European exercise. v1 uses the
+   European formula as an approximation. Early exercise is only materially valuable
+   for deep-ITM options near an ex-dividend date (calls) or deep-ITM puts at high
+   rates; the engine **flags** `earlyExerciseApprox` on any contract that is both
+   deep ITM (|delta| ≥ 0.90) and inside a dividend/expiry window, rather than
+   correcting the price. A binomial (American) model is a paid-phase upgrade. This is
+   the direct analog of the "holidays ignored in DTE" simplification.
+2. **Flat, static IV.** Each contract is priced at its own quoted IV; the engine does
+   **not** model a volatility surface or IV changes over the holding period. Every
+   forward-looking number in Part III therefore assumes *IV as quoted now* — stated
+   in the honest labels (III.6, III.13).
+
+**Time uses calendar days, not trading days** (`/365`), matching how brokers quote
+DTE. A theta expressed *per calendar day* (III.2) is consistent with this.
+
+---
+
+## III.2 The five greeks — definitions, formulas, and what to look for
+
+This section is the **educational core** — its prose is published verbatim on
+`/methodology/options/{delta,gamma,theta,vega,rho}`. Each greek is the sensitivity of
+the option's price to one input. All formulas below are exact BSM (with `q`);
+**calls and puts share gamma and vega**; delta, theta, and rho differ by type.
+
+**Price** (so every greek has its parent in view):
+
+```
+Call = S·e^(−qT)·N(d1) − K·e^(−rT)·N(d2)
+Put  = K·e^(−rT)·N(−d2) − S·e^(−qT)·N(−d1)
+```
+
+### Delta (Δ) — direction exposure
+
+```
+Δ_call = e^(−qT) · N(d1)          ∈ (0, 1)
+Δ_put  = −e^(−qT) · N(−d1)        ∈ (−1, 0)
+```
+
+*What it means:* the dollar change in the option per **$1** move in the underlying —
+and, loosely, the option's share-equivalent exposure (a 0.60-delta call moves like 60
+shares). *What to look for:* delta near **0.50** ≈ at-the-money; **deep ITM** (→1.0)
+behaves like stock with less time-premium risk; **far OTM** (→0) is a low-probability,
+high-leverage lottery ticket. Delta also **approximates** the risk-neutral chance the
+option finishes ITM (III.3) — a useful intuition, not an identity.
+
+### Gamma (Γ) — how fast delta moves
+
+```
+Γ = e^(−qT) · n(d1) / (S · σ · √T)          ≥ 0, same for calls and puts
+```
+
+*What it means:* the change in **delta** per $1 move — the curvature of your exposure.
+*What to look for:* gamma **peaks at the money and near expiration**. High gamma = your
+directional exposure changes fast (great when right, punishing when wrong); it is the
+twin of theta — you pay in time decay for the privilege of high gamma.
+
+### Theta (Θ) — time decay, **per calendar day**
+
+```
+Θ_call = [ −S·e^(−qT)·n(d1)·σ / (2√T) − r·K·e^(−rT)·N(d2)  + q·S·e^(−qT)·N(d1) ] / 365
+Θ_put  = [ −S·e^(−qT)·n(d1)·σ / (2√T) + r·K·e^(−rT)·N(−d2) − q·S·e^(−qT)·N(−d1) ] / 365
+```
+
+*What it means:* the dollars the option **loses per day** from the passage of time
+alone (usually negative for long options). *What to look for:* theta **accelerates as
+expiry approaches** and is worst for at-the-money options. Buyers fight theta (it is
+the rent on optionality); sellers collect it. The confidence model (III.7) penalizes a
+trade whose theta burden over the expected holding window is large relative to the
+premium at risk.
+
+### Vega (ν) — volatility exposure, **per 1 IV point**
+
+```
+ν = S·e^(−qT)·n(d1)·√T / 100          ≥ 0, same for calls and puts
+```
+
+*What it means:* the dollar change per **1 percentage point** change in implied
+volatility. *What to look for:* vega is **largest for longer-dated, at-the-money**
+options. Long options are **long vega** (helped when IV rises); because v1 has **no IV
+history**, it cannot tell you whether IV is cheap or rich (III.9) — so vega is shown
+and taught, but never traded *on* in v1.
+
+### Rho (ρ) — interest-rate exposure, **per 1 rate point**
+
+```
+ρ_call =  K·T·e^(−rT)·N(d2)  / 100
+ρ_put  = −K·T·e^(−rT)·N(−d2) / 100
+```
+
+*What it means:* the dollar change per 1 percentage-point change in the risk-free
+rate. *What to look for:* rho matters mainly for **LEAPS** (long `T`); for short-dated
+trades it is negligible. It is shown for completeness and taught last.
+
+---
+
+## III.3 Probability metrics — and their honest labels
+
+Two probabilities are computed under the model's risk-neutral lognormal assumption.
+
+**Probability ITM** — chance the option expires in the money:
+
+```
+P(ITM)_call = N(d2)          P(ITM)_put = N(−d2)
+```
+
+**Probability of profit (POP)** — chance the position finishes past its breakeven at
+expiration. For a **long single leg**, breakeven `B = K + premium` (call) or
+`K − premium` (put). POP reuses the `d2` form evaluated at `B` instead of `K`:
+
+```
+d2(B) = [ ln(S/B) + (r − q − σ²/2)·T ] / (σ·√T)
+POP_long_call = N(d2(B))      POP_long_put = N(−d2(B))
+```
+
+For **defined-risk spreads**, POP = risk-neutral `P` of finishing on the profitable
+side of the structure's breakeven (III.10 gives each structure's breakeven).
+
+**The binding label (rendered wherever POP appears):**
+
+> *Model-based probability of profit — the risk-neutral (Black-Scholes) chance of
+> finishing past breakeven at expiration, computed from the option's current implied
+> volatility. It is a property of today's option prices, **not a measured win rate and
+> not a promise**, and it assumes the position is held to expiration with volatility as
+> implied now.*
+
+This is the options analog of the equity "signal agreement, not a win probability"
+rule (II.4): POP may be **shown**, never sold as a guarantee, until a calibration
+pipeline measures realized outcomes.
+
+---
+
+## III.4 Liquidity & tradeability
+
+Options with no real market cannot be priced or exited fairly. Before a contract is
+scored it must clear a liquidity screen (which feeds gate **OG1**):
+
+```
+mid       = (bid + ask) / 2            when bid > 0 and ask > 0, else lastPrice
+spreadPct = (ask − bid) / mid
+```
+
+| Constant (config) | Value | Meaning |
+|---|---|---|
+| `liquidity.maxSpreadPct` | **0.10** | reject a leg whose bid/ask spread exceeds 10% of mid |
+| `liquidity.minOpenInterest` | **100** | reject a leg with thin standing interest |
+| `liquidity.minVolume` | **10** | reject a leg with no meaningful day's flow |
+| `liquidity.softSpreadPct` | **0.05** | spread in [0.05, 0.10] is tradable but costs a confidence penalty (III.7) |
+
+**All pricing uses `mid` (the mark).** Wide markets make every forward number
+unreliable, so an illiquid chain/contract is refused, not silently priced off a stale
+`lastPrice`. For multi-leg strategies, the screen applies **per leg**, and the net
+debit/credit is computed from each leg's mid.
+
+---
+
+## III.5 The directional bridge — consuming the equity read
+
+The options engine does not vote on direction; it **inherits** it:
+
+| Equity `direction` | Options intent |
+|---|---|
+| `LONG` (a plan was emitted) | **bullish** structures |
+| `SHORT` (a plan was emitted) | **bearish** structures |
+| `NONE`, or the equity engine **refused** (any gate G1–G5) | **no directional edge → OG3 refusal** |
+
+Because the options engine structures a trade around the **equity plan's target and
+stop** (III.6), it requires that the equity engine *emitted a plan* — i.e. passed all
+of G1–G5. If the equity read produced no trade, there is no thesis to express in
+options, and Part III refuses at **OG3** (never a 500). Non-directional strategies
+(long straddle/strangle, iron condor/butterfly) express a **volatility** view, which
+requires an IV-regime read the free feed cannot provide (III.9); they are **defined
+and taught** in III.10 but are **not selectable in v1**.
+
+The equity confidence `C` carries through as the conviction driving both the scenario
+probability `p = C/100` (III.6) and the options confidence base (III.7) — the *same*
+provisional, uncalibrated proxy, with the *same* honesty caveats as II.4/II.7.
+
+---
+
+## III.6 The expected-return model — illustrative, defined by the equity plan
+
+The analog of the equity `Plan.ev` (`calibrated: false`). It reuses the equity plan's
+two named outcomes — **target** and **stop** — as the two scenarios, weighted by the
+equity confidence:
+
+```
+p       = C / 100                                  (equity signal-agreement proxy)
+V_up    = payoff of the structure at S = equityTarget   (expiration intrinsic value)
+V_dn    = payoff of the structure at S = equityStop      (expiration intrinsic value)
+cost    = net premium paid  (debit structures)  |  max loss (credit structures)
+
+EV$     = p · (V_up − entryValue) + (1 − p) · (V_dn − entryValue)
+EV_R    = EV$ / riskCapital                        (expected return on capital at risk)
+```
+
+where `entryValue` = net debit (long/debit) or net credit received (short/credit), and
+`riskCapital` = the structure's **defined max loss** (III.10). For a long single leg,
+`entryValue = riskCapital = premium`, so `EV_R = EV$ / premium` — an expected **return
+on premium**.
+
+**Modeling choices (binding, and honestly labeled):**
+
+- Outcomes are valued at **expiration intrinsic value** at the equity target / stop.
+  This deliberately ignores any residual time value (conservative for long premium)
+  and assumes the directional move **resolves by the option's expiration**. Contracts
+  whose expiration is far shorter than the equity plan's horizon are penalized (theta
+  burden, III.7) and may be filtered (OG2).
+- `p` and `1 − p` are the equity confidence split — **not** the option's own POP. POP
+  (III.3) is reported **alongside** as an independent, model-based cross-check.
+- The whole quantity is **illustrative** (`calibrated: false`), labeled: *"illustrative
+  expected return under the equity engine's target/stop scenarios with volatility held
+  constant — not a forecast."*
+
+**RR analog** (for gate OG4's companion check and display):
+
+```
+RR = (V_up − entryValue) / (entryValue − V_dn)     bounded because V_dn ≥ 0
+```
+
+---
+
+## III.7 Options "signal agreement" (confidence)
+
+Mirrors the equity `Confidence` (II.4): a **base** minus **itemized, subtractive
+penalties**, each with a reason string, bucketed by the *same cutoffs as the equity
+confidence* (`config.confidence.buckets`: HIGH ≥ 70, MODERATE ≥ 45, else LOW).
+
+```
+base = C_equity                                   (inherit the underlying conviction)
+Conf = clamp(round(base − Σ penalties), 5, 95)
+```
+
+The base is the equity conviction because **options add no independent directional
+evidence** — they add *structural quality*, which the penalties price:
+
+| Penalty (config `optionsConfidence.penalties`) | Points | Fires when |
+|---|---|---|
+| wide spread | **−5** | leg spreadPct in [`softSpreadPct`, `maxSpreadPct`] (0.05–0.10) |
+| theta burden | **−8** | `|Θ_perDay| · holdingDays / entryValue` > `thetaBurdenMax` (**0.50**) |
+| low delta (lottery) | **−10** | chosen leg `|Δ|` < `deltaFloor` (**0.20**) |
+| earnings inside option life | **−8** | an earnings date falls before expiration (also emits a warning) |
+| short-assignment risk | **−6** | a short leg is ITM or within `assignBufferPct` (**2%**) of the money |
+
+`holdingDays` = the equity timeframe's nominal horizon (config
+`horizonDays.{intraday,swing,position}`), so theta is judged over how long the plan
+expects to hold. Confidence is labeled **"signal agreement (0–100),"** never a win
+rate — identical to the equity contract.
+
+---
+
+## III.8 Scoring, ranking, and the single best trade
+
+For the inherited intent, the engine builds a **candidate universe**: every liquid
+single-leg contract (calls for bullish, puts for bearish) that clears III.4 and the
+DTE window (OG2), **plus** every constructible directional strategy from III.10
+(debit/credit verticals, LEAPS, cash-secured put / covered-call overlay). Each
+candidate carries: `EV_R` (III.6), `Conf` (III.7), `POP` (III.3), and its defined-risk
+payoff (III.10).
+
+**Rank score** — expected edge weighted by conviction (return *on risk*, so the ranker
+prefers capital efficiency, consistent with the equity engine ranking in R-multiples,
+not raw dollars):
+
+```
+rankScore = EV_R · (Conf / 100)
+tie-breakers, in order:  higher POP  →  tighter spreadPct  →  fewer legs (simpler)
+```
+
+The **best trade** is the top-ranked candidate that also passes **all** OG gates
+(III.9). If the top candidate fails a gate it is dropped and the next is considered;
+if none survive, the whole analysis is a refusal naming the last binding gate.
+
+**Constrained queries** ("best trade **at this price**", "**at this expiration**") are
+the *same* pipeline with the candidate universe pre-filtered:
+
+- `strike` → snapped to the **nearest listed strike** (config
+  `constraints.strikeRounding = 'nearest'`); ties round up.
+- `expiration` → snapped to the **nearest listed expiration** on/after the request.
+
+A constrained query **may still refuse** — if the requested strike/expiration is
+illiquid (OG1), outside the DTE window (OG2), or clears no expected-value margin
+(OG4), the honest answer is a refusal, not a forced trade. This is stated in the UI.
+
+---
+
+## III.9 The options refusal gates — OG1 … OG5
+
+Ordered short-circuit, exactly like G1–G5: evaluated in order, the response names the
+**first** failure and its reason string. Cheapest/broadest structural checks first,
+then edge, then value, then event.
+
+| Gate | Predicate | Refusal reason (shown) |
+|---|---|---|
+| **OG1 Liquidity** | at least one contract in the relevant side clears III.4 (spread/OI/volume); the *chosen* structure's every leg clears it | "illiquid chain — the market is too wide to price or exit a fair trade" |
+| **OG2 DTE window** | ≥ 1 tradable expiration in `[minDTE, maxDTE]` = **[7, 400]** days (LEAPS candidates require ≥ `leapsMinDTE` = **365**) | "no expirations in the tradable window" |
+| **OG3 Directional edge** | the equity engine emitted a plan **and** `C_equity ≥ og3.minEquityConfidence` (**35**, = equity G2 floor) | "no underlying edge — the equity read produced no trade to express" |
+| **OG4 Expected-value floor** | best candidate `EV_R ≥ og4.evMargin` (**0.20**) | "no option structure clears the expected-value margin" |
+| **OG5 Event** | if an earnings date precedes expiration **and** the structure is **net-short premium**, veto; net-long-premium structures **pass with a warning + penalty** (III.7), since a buyer can benefit from event vol | "earnings inside the contract's life — assignment/gap risk on a short-premium structure" |
+
+**No IV-regime gate in v1** — that check needs IV Rank, which is unavailable on free
+data (below). It is deferred to the paid-feed phase, where an "IV too rich to buy /
+too cheap to sell" gate joins this list.
+
+### IV Rank — documented as **unavailable**
+
+IV Rank / IV Percentile require a **history** of implied volatility (typically 1 year)
+to say whether today's IV is high or low for this name. The free Yahoo feed provides
+**current** per-contract IV only — no history. The engine therefore reports:
+
+```
+ivRank = { status: 'unavailable', reason: 'no IV history on the free data feed' }
+```
+
+and the UI renders **"IV Rank — unavailable (free data)."** The engine **never
+fabricates** an IV series. When a paid feed with IV history lands, `ivRank` becomes a
+real number and unlocks the IV-regime gate and the non-directional strategies (III.10).
+
+---
+
+## III.10 The strategy library
+
+Greeks are **additive across legs** (a two-leg position's delta is the sum of its
+legs' deltas, etc.) — a clean invariant the tests assert. Each structure below lists
+its legs, when it is preferred, how strikes/width/DTE are selected, and its
+**defined-risk payoff** (max loss, max gain, breakeven). Widths and deltas are config
+bands, not magic numbers.
+
+**Directional — selectable in v1** (ranked together by III.8):
+
+| Strategy | Legs | Preferred when | Selection | Max loss / Max gain / Breakeven |
+|---|---|---|---|---|
+| **Long Call** | +1 call | bullish, high conviction, wants leverage/convexity | Δ in `longDeltaBand` **0.55–0.70**; DTE from timeframe | loss = premium · unbounded gain · BE = K + premium |
+| **Long Put** | +1 put | bearish, high conviction | Δ in **[−0.70, −0.55]**; DTE from timeframe | loss = premium · gain = K − premium (to 0) · BE = K − premium |
+| **Bull Call (debit) spread** | +call Kₗ, −call Kₕ | bullish, wants to cut cost/theta, capped upside OK (esp. target near Kₕ) | Kₗ ≈ ATM; width `verticalWidthAtr` ≈ **1×ATR** toward the target | loss = netDebit · gain = width − netDebit · BE = Kₗ + netDebit |
+| **Bear Put (debit) spread** | +put Kₕ, −put Kₗ | bearish, cost/theta reduction | Kₕ ≈ ATM; width ≈ 1×ATR toward target | loss = netDebit · gain = width − netDebit · BE = Kₕ − netDebit |
+| **Bull Put (credit) spread** | −put Kₕ, +put Kₗ | bullish/neutral, collect premium, defined risk | short Δ ≈ **0.30**; width ≈ 1×ATR | loss = width − netCredit · gain = netCredit · BE = Kₕ − netCredit |
+| **Bear Call (credit) spread** | −call Kₗ, +call Kₕ | bearish/neutral, collect premium | short Δ ≈ 0.30; width ≈ 1×ATR | loss = width − netCredit · gain = netCredit · BE = Kₗ + netCredit |
+| **Cash-Secured Put** | −1 put (cash-secured) | bullish/neutral, willing to own the shares | Δ ≈ **−0.30**, DTE 30–45 | loss = K − premium (to 0) · gain = premium · BE = K − premium |
+| **Covered Call** (overlay) | +100 shares, −1 call | own the stock, mildly bullish, want income | short Δ ≈ **0.30** above cost | loss = (cost − premium) to 0 · gain = (K − cost) + premium · BE = cost − premium |
+| **LEAPS** | +1 long-dated call/put | position-horizon conviction; stock replacement | DTE ≥ **365**; deep-ITM Δ in `leapsDeltaBand` **0.70–0.85** (minimize extrinsic/theta) | loss = premium · (call) unbounded gain / (put) K − premium · BE = K ± premium |
+
+**Non-directional — defined & taught, NOT selectable in v1** (need an IV-regime read,
+III.9): **Long Straddle / Strangle** (long vol — profits on a large move either way;
+BE = K ± total premium), **Iron Condor** and **Iron Butterfly** (short vol, range-bound
+— defined risk from two credit spreads). These render on the education pages with full
+payoff math and are labeled *"requires an IV-regime read (IV Rank), unavailable on the
+free feed — enabled with the paid data phase."* The engine will not emit them as a best
+trade in v1.
+
+**Selection is numeric, not hardcoded.** The priors above (which structure "fits" a
+setup) seed *which* candidates get built; the **ranker (III.8) decides the winner** by
+`EV_R · Conf`. There is no "always pick a long call" rule — a debit spread frequently
+wins when the equity target sits near a sensible short strike (see III.11).
+
+---
+
+## III.11 Worked example — end to end
+
+Reuses the **QQXR** equity result from II.9: **LONG**, `C = 86`, entry **84.60**, stop
+**80.96**, target **91.88**. Options context passed in: `r = 0.04`, `q = 0`, an
+expiration **35 days** out (`T = 35/365 = 0.0959`), all quoted at **σ = 0.30**, a
+liquid chain (spreads < 5%, OI > 500). `p = C/100 = 0.86`.
+
+**Two candidate single legs and one spread** (BSM per III.1–III.2; prices per share,
+×100 per contract):
+
+| Candidate | Premium (mid) | Δ | POP (III.3) | V_up @ 91.88 | V_dn @ 80.96 | EV_R (III.6) | rankScore |
+|---|---|---|---|---|---|---|---|
+| Long call **K85** | 3.10 | 0.51 | 0.33 | 6.88 | 0 | (0.86·6.88 − 3.10)/3.10 = **+0.91** | 0.91·0.86 = **0.78** |
+| Long call **K90** | 1.31 | 0.28 | 0.24 | 1.88 | 0 | (0.86·1.88 − 1.31)/1.31 = **+0.23** | 0.23·0.86 = 0.20 |
+| **Bull call 85/90** | 1.79 (debit) | 0.23 net | 0.39 | 5.00 (width) | 0 | (0.86·5.00 − 1.79)/1.79 = **+1.40** | 1.40·0.86 = **1.21** |
+
+**Best trade = the Bull Call Spread (long 85 call / short 90 call).** Its defined-risk
+payoff: **max loss 1.79** (netDebit, $179/contract), **max gain 3.21** ($321),
+**breakeven 86.79**. It beats the naked K85 call on `EV_R` because the equity target
+(91.88) sits **above** the short strike, so the spread captures the full $5 width at a
+third of the cost — higher return *on risk*, and a better POP (0.39 vs 0.33). The naked
+K90 call is the cheap-lottery trap: real leverage, poor expected value. Confidence =
+**86** inherited, **no** option penalties (tight spreads, Δ 0.23 net ≥ floor, theta
+over ~10 swing days < 50% of debit, no earnings in 35 days). All gates: OG1 liquid ✓ ·
+OG2 35 ∈ [7,400] ✓ · OG3 equity plan emitted, C 86 ≥ 35 ✓ · OG4 EV_R 1.40 ≥ 0.20 ✓ ·
+OG5 no earnings ✓ → **emitted**.
+
+**Emitted:** *Buy the QQXR 85/90 bull call spread, 35 DTE · net debit $1.79 · max loss
+$179 · max gain $321 · breakeven 86.79 · illustrative expected return +140% on risk ·
+model-based POP 39% · signal agreement 86.*
+
+**Counterfactual:** the II.9 counterfactual equity read **refused at G2** (`C = 29`, no
+plan emitted). With no underlying edge, Part III refuses at **OG3**: *"no underlying
+edge — the equity read produced no trade to express."* No chain is even scored. This is
+the intended behavior: **options never manufacture a thesis the equity engine
+declined.**
+
+> The exact greeks/prices above are the *illustrative* output of the III.1–III.2
+> formulas at the stated inputs (rounded to 2 dp). The Phase-1 **golden BSM test** pins
+> the engine's numbers against a reference implementation, and this worked example is
+> regenerated from that verified output to the published precision — the binding items
+> are the **formulas, constants, gates, and selection rule**, not the rounded digits.
+
+---
+
+## III.12 Constants (proposed — the versioned options config)
+
+All live in `packages/options-engine/src/config.ts` behind `OPTIONS_ENGINE_VERSION`
+(proposed **`0.1.0`** — beta, unshipped) and `optionsConfigHash`:
+
+```
+riskFreeRate            0.04          dividendYield            profile → default 0
+liquidity.maxSpreadPct  0.10          liquidity.softSpreadPct  0.05
+liquidity.minOpenInterest 100         liquidity.minVolume      10
+dte.minDTE  7   dte.maxDTE 400        leapsMinDTE 365
+longDeltaBand  [0.55, 0.70]           leapsDeltaBand [0.70, 0.85]
+shortDeltaTarget 0.30                 deltaFloor 0.20
+verticalWidthAtr 1.0                  assignBufferPct 0.02
+og3.minEquityConfidence 35            og4.evMargin 0.20
+confidence.penalties  { wideSpread 5, thetaBurden 8, lowDelta 10, earnings 8, assignment 6 }
+thetaBurdenMax 0.50                   horizonDays { intraday 2, swing 10, position 40 }
+confidence.buckets      (reuse equity: HIGH ≥ 70, MODERATE ≥ 45, else LOW)
+rank  EV_R · (Conf/100), tie-break POP ↓ then spread ↑ then legs ↑
+```
+
+These are **reasoned priors**, not measured optima — the same status the equity weights
+carry (II.2). A future options-calibration pipeline tunes them; the `/methodology`
+page says so.
+
+---
+
+## III.13 Limitations — what options analysis cannot see
+
+Published verbatim at `/methodology/options/limitations`, in addition to every Part II
+limitation (which still applies to the underlying read):
+
+1. **POP and expected return are model outputs, not promises.** Both come from
+   Black-Scholes under a risk-neutral lognormal assumption with volatility held
+   constant. They describe today's option prices, not the future.
+2. **Options can expire worthless — a bought option's max loss is 100% of premium.**
+   The engine emphasizes *defined-risk* structures for exactly this reason, and always
+   states max loss in dollars.
+3. **European pricing of American options** (III.1) — early-exercise value is
+   approximated away and only flagged; deep-ITM near dividends is where this matters.
+4. **No volatility view on free data.** Without IV history there is no IV Rank, so the
+   engine cannot say IV is cheap or rich, will not sell/buy premium *on volatility*,
+   and does not offer non-directional strategies in v1 (III.9–III.10).
+5. **Static-IV, hold-to-expiration assumption.** Real P/L depends on the path and on IV
+   changes the model ignores; a mid-life exit can differ materially from the intrinsic
+   scenarios in III.6.
+6. **Free-data caveats compound for options:** quotes are delayed, greeks are computed
+   (not vendor-supplied), and thin/wide chains are common — the liquidity gate (OG1)
+   is the primary defense, and every response carries its data timestamp.
+7. **Assignment, pin, and dividend risk** on short legs are real and only partially
+   modeled (OG5 + the assignment penalty). Short options can be assigned early.
+8. **Nothing here is financial advice.** Options carry more risk than the underlying
+   shares. The engine reports structure and defined-risk arithmetic; the decision, and
+   the risk, belong to the user.
