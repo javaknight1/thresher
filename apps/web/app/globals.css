@@ -16,6 +16,26 @@
   /* populated by next/font in app/layout.tsx */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  color-scheme: dark;
+}
+
+/* Light theme — applied via <html data-theme="light"> (lib/prefs). Overrides
+   only the palette tokens; the whole app references these, never raw hex, so
+   the switch cascades. The base :root above stays the dark (default) palette. */
+:root[data-theme='light'] {
+  --bg: #f5f7fa;
+  --panel: #ffffff;
+  --panel2: #eef1f6;
+  --border: #d5dbe4;
+  --text: #1b2230;
+  --muted: #5b6675;
+  --amber: #b1741a;
+  --long: #14915f;
+  --short: #cf3f3f;
+  --neutral: #5b6675;
+
+  color-scheme: light;
 }
 
 * {

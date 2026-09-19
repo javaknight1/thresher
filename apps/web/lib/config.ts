@@ -88,3 +88,43 @@ export const WEB_CONFIG = {
     defaultWatchlist: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD'],
   },
 } as const;
+
+/**
+ * User preferences (the /settings surface). DISPLAY / CONVENIENCE ONLY — prefs
+ * never touch engine math (weights, thresholds, ATR multipliers, penalties);
+ * those are versioned in packages/engine/src/config.ts (CLAUDE.md). Persisted in
+ * Clerk `unsafeMetadata.prefs` when signed in, else localStorage (see lib/prefs).
+ */
+export type ThemePref = 'system' | 'light' | 'dark';
+export type BoardSort = 'score' | 'quality' | 'rr' | 'confidence';
+export type BoardDirection = 'all' | 'long' | 'short';
+export type BoardTab = 'top' | 'following' | Timeframe;
+
+export interface Prefs {
+  /** color theme; 'system' follows prefers-color-scheme */
+  theme: ThemePref;
+  /** default timeframe on /analyze when the URL doesn't specify one */
+  defaultTimeframe: Timeframe;
+  /** position-sizer account size (raw input string; '' = unset) */
+  accountSize: string;
+  /** position-sizer per-trade risk % */
+  riskPct: number;
+  /** default Leaderboard view / filters when the URL omits them */
+  boardTab: BoardTab;
+  boardDirection: BoardDirection;
+  boardMinRR: number;
+  boardSort: BoardSort;
+}
+
+export const PREFS_STORAGE_KEY = 'thresher:prefs';
+
+export const DEFAULT_PREFS: Prefs = {
+  theme: 'system',
+  defaultTimeframe: 'swing',
+  accountSize: '',
+  riskPct: 1,
+  boardTab: 'top',
+  boardDirection: 'all',
+  boardMinRR: 0,
+  boardSort: 'score',
+};

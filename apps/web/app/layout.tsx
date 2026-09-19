@@ -3,7 +3,15 @@ import type { ReactNode } from 'react';
 import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { authEnabled } from '../lib/auth';
+import { PREFS_STORAGE_KEY } from '../lib/config';
+import PrefsBoot from '../components/PrefsBoot';
 import './globals.css';
+
+/**
+ * Set <html data-theme> before first paint (no theme flash). Reads the same
+ * localStorage blob lib/prefs writes; falls back to the OS preference.
+ */
+const THEME_SCRIPT = `(function(){try{var p=JSON.parse(localStorage.getItem('${PREFS_STORAGE_KEY}')||'{}');var t=(p&&p.theme)||'system';var d=t==='light'?'light':t==='dark'?'dark':(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',d);}catch(e){}})();`;
 
 const display = Space_Grotesk({
   subsets: ['latin'],
@@ -26,7 +34,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   const tree = (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
+      <body>
+        <PrefsBoot />
+        {children}
+      </body>
     </html>
   );
   // ClerkProvider only when keys are configured; otherwise the app renders open.
