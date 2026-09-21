@@ -1,0 +1,43 @@
+/**
+ * Auth proxy — Next 16's renamed `middleware` convention (same functionality).
+ * When Clerk keys are present it protects the app + API and sends signed-in
+ * users from the marketing landing (/) straight to /leaderboard. When keys are
+ * absent (CI / e2e / zero-env local) it is a pass-through, so the app runs open
+ * exactly as before.
+ *
+ * Clerk 7.9.2 runs `clerkMiddleware()` inside proxy.ts on Next 16 — its
+ * middleware-location guard accepts both "middleware" and "proxy" there.
+ */
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+
+const isProtected = createRouteMatcher([
+  '/leaderboard(.*)',
+  '/analyze(.*)',
+  '/dashboard(.*)',
+  '/settings(.*)',
+  '/api/v1/(.*)',
+]);
+
+const withClerk = clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
+  // Signed-in users at the landing page go straight to the leaderboard.
+  if (userId && req.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/leaderboard', req.url));
+  }
+  if (isProtected(req)) await auth.protect();
+});
+
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return NextResponse.next();
+  return withClerk(req, event);
+}
+
+export const config = {
+  matcher: [
+    // Run on everything except Next internals and files with an extension…
+    '/((?!_next|[^?]*\\.[^?]*$).*)',
+    // …and always on API routes.
+    '/(api|trpc)(.*)',
+  ],
+};
