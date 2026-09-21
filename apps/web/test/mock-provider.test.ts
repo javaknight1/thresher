@@ -92,16 +92,24 @@ describe('MockProvider + real engine', () => {
   });
 });
 
-describe('MockProvider.getDaysToEarnings', () => {
+describe('MockProvider.getEarnings', () => {
   const provider = new MockProvider();
 
-  it('returns 1 for MOCKEARNINGS', async () => {
-    await expect(provider.getDaysToEarnings('MOCKEARNINGS')).resolves.toBe(1);
+  it('returns 1 trading day (with a date) for MOCKEARNINGS', async () => {
+    const e = await provider.getEarnings('MOCKEARNINGS');
+    expect(e.tradingDays).toBe(1);
+    expect(typeof e.nextDate).toBe('string');
   });
 
-  it('returns null for everything else', async () => {
-    await expect(provider.getDaysToEarnings('MOCKLONG')).resolves.toBeNull();
-    await expect(provider.getDaysToEarnings('NVDA')).resolves.toBeNull();
+  it('returns nulls for everything else', async () => {
+    await expect(provider.getEarnings('MOCKLONG')).resolves.toEqual({
+      nextDate: null,
+      tradingDays: null,
+    });
+    await expect(provider.getEarnings('NVDA')).resolves.toEqual({
+      nextDate: null,
+      tradingDays: null,
+    });
   });
 });
 

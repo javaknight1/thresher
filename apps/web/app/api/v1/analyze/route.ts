@@ -11,6 +11,7 @@ import type { Timeframe } from '@thresher/engine';
 import { ERROR_STATUS } from '../../../../lib/api-types';
 import type { ApiError } from '../../../../lib/api-types';
 import { createBarCache } from '../../../../lib/cache';
+import { createEarningsStore } from '../../../../lib/earnings-store';
 import { createRateLimiter } from '../../../../lib/ratelimit';
 import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
@@ -25,6 +26,7 @@ export const runtime = 'nodejs';
 
 /** Module-level: cache + limiter survive across requests within an isolate. */
 const barCache = createBarCache();
+const earningsStore = createEarningsStore();
 const rateLimiter = createRateLimiter();
 
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
@@ -119,6 +121,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     provider: getProvider(),
     cache: barCache,
     asOf,
+    earningsStore,
   });
 
   if (!result.ok) {

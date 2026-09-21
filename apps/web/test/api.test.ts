@@ -12,7 +12,7 @@ import type { Bar, Timeframe } from '@thresher/engine';
 import { runAnalysis } from '../lib/analyze-service';
 import { MemoryBarCache } from '../lib/cache';
 import { MockProvider } from '../lib/providers/mock';
-import type { CompanyProfile, MarketDataProvider } from '../lib/contracts';
+import type { CompanyProfile, EarningsInfo, MarketDataProvider } from '../lib/contracts';
 import { WEB_CONFIG } from '../lib/config';
 
 /** Fixed clock: deterministic asOf/dataFreshness and cache freshness. */
@@ -198,7 +198,7 @@ describe('runAnalysis — earnings context (MOCKEARNINGS/swing)', () => {
     if ('status' in res.body) throw new Error('expected a full analysis, got partial');
     const body = res.body;
 
-    // getDaysToEarnings = 1 ≤ the swing veto window → flag set.
+    // getEarnings tradingDays = 1 ≤ the swing veto window → flag set.
     expect(body.flags.earningsInWindow).toBe(true);
 
     // The generic MOCKEARNINGS tape nets out below the ±0.22 edge threshold,
@@ -226,8 +226,8 @@ describe('runAnalysis — caching', () => {
       this.getBarsCalls += 1;
       return this.inner.getBars(symbol, timeframe);
     }
-    getDaysToEarnings(symbol: string, nowDate?: Date): Promise<number | null> {
-      return this.inner.getDaysToEarnings(symbol, nowDate);
+    getEarnings(symbol: string, nowDate?: Date): Promise<EarningsInfo> {
+      return this.inner.getEarnings(symbol, nowDate);
     }
     getProfile(symbol: string): Promise<CompanyProfile> {
       return this.inner.getProfile(symbol);

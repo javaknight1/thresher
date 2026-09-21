@@ -12,6 +12,7 @@ import { WEB_CONFIG } from '../config';
 import {
   ProviderError,
   type CompanyProfile,
+  type EarningsInfo,
   type EarningsQuarter,
   type MarketDataProvider,
   type SymbolMatch,
@@ -114,23 +115,23 @@ export class YahooProvider implements MarketDataProvider {
   }
 
   /**
-   * Trading days until the next earnings report, via quoteSummary
+   * The next earnings report (date + trading-days distance), via quoteSummary
    * calendarEvents. Weekday counting only — holidays ignored (see
-   * countTradingDays). Best-effort by design: past dates, no scheduled
-   * earnings, or any provider error all yield null; earnings data must never
-   * fail an analysis.
+   * countTradingDays). Best-effort by design: past dates, no scheduled earnings,
+   * or any provider error all yield nulls; earnings data must never fail an
+   * analysis.
    */
-  async getDaysToEarnings(symbol: string, now: Date = new Date()): Promise<number | null> {
+  async getEarnings(symbol: string, now: Date = new Date()): Promise<EarningsInfo> {
     try {
       const summary = await this.yf.quoteSummary(symbol, { modules: ['calendarEvents'] });
       const dates = summary.calendarEvents?.earnings?.earningsDate ?? [];
       const next = dates
         .filter((d) => d.getTime() > now.getTime())
         .sort((a, b) => a.getTime() - b.getTime())[0];
-      if (!next) return null;
-      return countTradingDays(now, next);
+      if (!next) return { nextDate: null, tradingDays: null };
+      return { nextDate: next.toISOString(), tradingDays: countTradingDays(now, next) };
     } catch {
-      return null;
+      return { nextDate: null, tradingDays: null };
     }
   }
 

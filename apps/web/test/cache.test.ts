@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Bar, Timeframe } from '@thresher/engine';
 import { ProviderError } from '../lib/contracts';
-import type { BarCache, CompanyProfile, MarketDataProvider } from '../lib/contracts';
+import type {
+  BarCache,
+  CompanyProfile,
+  EarningsInfo,
+  MarketDataProvider,
+} from '../lib/contracts';
 import { WEB_CONFIG } from '../lib/config';
 import { MemoryBarCache, getBarsWithFreshness } from '../lib/cache';
 
@@ -33,8 +38,8 @@ class FakeProvider implements MarketDataProvider {
     return this.result;
   }
 
-  async getDaysToEarnings(): Promise<number | null> {
-    return null;
+  async getEarnings(): Promise<EarningsInfo> {
+    return { nextDate: null, tradingDays: null };
   }
 
   async getProfile(): Promise<CompanyProfile> {

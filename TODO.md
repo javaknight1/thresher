@@ -53,6 +53,28 @@ review after M0 and M1.
 - [ ] Nightly outcome labeler (cron): first-touch labeling per methodology horizons (intraday 3d / swing 30d / position 26w), `outcomes` table
 - [ ] History page (§6.4): hit rates by confidence bucket × timeframe, win/loss distributions; store refusals too (design doc §11.2: resolved YES)
 
+### Backtest / fact-check (the point of M3–M4)
+
+The engine is pure so a backtester can replay `analyze()` with no lookahead. The
+**"analyze as of a past time"** feature (shipped) is its interactive twin — the
+single-shot "replay at time T" primitive the batch backtest loops over.
+
+- [ ] **Batch backtester** — loop the as-of path over a **pre-declared** universe ×
+  period (NOT the ad-hoc cache — that has selection bias), label first-touch
+  target-before-stop per horizon, aggregate hit-rate by confidence bucket ×
+  timeframe. Honesty guardrails: no lookahead, out-of-sample/walk-forward, n ≥ 300
+  per bucket, and disclose execution costs (slippage/spread not in the R:R math).
+- [x] **Point-in-time earnings capture (forward)** — *building now*: on every live
+  analysis (on-demand + the scan cron) record the observed next-earnings **date**
+  in an append-only `EarningsStore` (Upstash set per symbol + a symbol index). Over
+  ~3–4 weeks this accumulates a real point-in-time earnings calendar, so a historical
+  replay/backtest inside the captured window gets a **faithful G5** instead of
+  "earnings unknown". Forward-only by nature — we accept no backtest of pre-capture
+  history (free data has no clean historical announcement calendar).
+- [ ] **Store the used earnings distance with each setup** *(needs `emitted_setups`,
+  M2/Supabase)* — persist the exact `tradingDaysToEarnings` the engine used, so the
+  backtester replays a setup with its true point-in-time value (no reconstruction).
+
 ## M4 — Calibration
 
 - [ ] Backtest runner: walk-forward replay of `analyze()` (no lookahead), `backtest_runs`/`setups` tables

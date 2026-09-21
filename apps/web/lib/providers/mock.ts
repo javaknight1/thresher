@@ -17,6 +17,7 @@ import type { Bar, Timeframe } from '@thresher/engine';
 import {
   ProviderError,
   type CompanyProfile,
+  type EarningsInfo,
   type EarningsQuarter,
   type MarketDataProvider,
   type SymbolMatch,
@@ -279,8 +280,11 @@ export class MockProvider implements MarketDataProvider {
     return asOf ? scoped.filter((b) => b.t <= asOf.getTime()) : scoped;
   }
 
-  async getDaysToEarnings(symbol: string): Promise<number | null> {
-    return symbol.toUpperCase() === 'MOCKEARNINGS' ? 1 : null;
+  async getEarnings(symbol: string): Promise<EarningsInfo> {
+    // MOCKEARNINGS: next earnings 1 day out from the fixed mock reference date.
+    return symbol.toUpperCase() === 'MOCKEARNINGS'
+      ? { nextDate: new Date(MOCK_NOW + 86_400_000).toISOString(), tradingDays: 1 }
+      : { nextDate: null, tradingDays: null };
   }
 
   async getProfile(symbol: string): Promise<CompanyProfile> {

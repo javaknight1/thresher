@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { Timeframe } from '@thresher/engine';
 import { createBarCache } from '../../../../lib/cache';
+import { createEarningsStore } from '../../../../lib/earnings-store';
 import { createScanStore } from '../../../../lib/scan-store';
 import { createFollowStore } from '../../../../lib/follow-store';
 import { getProvider } from '../../../../lib/providers/select';
@@ -20,6 +21,7 @@ import { WEB_CONFIG } from '../../../../lib/config';
 export const runtime = 'nodejs';
 
 const barCache = createBarCache();
+const earningsStore = createEarningsStore();
 const boardStore = createScanStore();
 const followStore = createFollowStore();
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
@@ -48,7 +50,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const followed = await followStore.allSymbols().catch(() => []);
 
     stage = 'scan';
-    const board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
+    const board = await runScan({
+      timeframe,
+      provider: getProvider(),
+      cache: barCache,
+      followed,
+      earningsStore,
+    });
     universeSize = board.universeSize;
 
     stage = 'store';

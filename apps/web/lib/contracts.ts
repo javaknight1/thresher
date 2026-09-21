@@ -16,6 +16,12 @@ export class ProviderError extends Error {
   }
 }
 
+/** Next-earnings info: the ISO date and the trading-days distance to it. */
+export interface EarningsInfo {
+  nextDate: string | null;
+  tradingDays: number | null;
+}
+
 export interface MarketDataProvider {
   /**
    * OHLCV per the timeframe profile (WEB_CONFIG.provider.lookback). Throws ProviderError.
@@ -25,10 +31,14 @@ export interface MarketDataProvider {
    */
   getBars(symbol: string, timeframe: Timeframe, asOf?: Date): Promise<Bar[]>;
   /**
-   * Trading days (weekend-adjusted; holidays ignored — documented approximation)
-   * until the next earnings report. null = unknown or none scheduled.
+   * The next scheduled earnings report: its date (ISO) and the trading days
+   * until it (weekend-adjusted; holidays ignored — documented approximation).
+   * Best-effort: past/none/any error → `{ nextDate: null, tradingDays: null }`;
+   * earnings data must never fail an analysis. Returning the DATE (not just the
+   * count) lets the service record a point-in-time earnings calendar so a future
+   * historical replay can apply gate G5 faithfully instead of "unknown".
    */
-  getDaysToEarnings(symbol: string, now?: Date): Promise<number | null>;
+  getEarnings(symbol: string, now?: Date): Promise<EarningsInfo>;
   /**
    * Company identity + fundamentals for the display-only context panel. This
    * data NEVER reaches the engine (the score is pure TA, methodology II.10).

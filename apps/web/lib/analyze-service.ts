@@ -20,6 +20,7 @@ import type { BarCache, BarsWithFreshness, MarketDataProvider } from './contract
 import { getBarsWithFreshness } from './cache';
 import { checkGuardrails } from './guardrails';
 import { WEB_CONFIG } from './config';
+import type { EarningsStore } from './earnings-store';
 
 export interface RunAnalysisInput {
   symbol: string;
@@ -34,6 +35,12 @@ export interface RunAnalysisInput {
    * earnings veto (the point-in-time earnings calendar isn't reconstructable).
    */
   asOf?: Date;
+  /**
+   * Optional append-only earnings log. On a LIVE analysis, the observed
+   * next-earnings date is recorded here (best-effort) to build a point-in-time
+   * earnings calendar for future historical replay. Omit to skip capture.
+   */
+  earningsStore?: EarningsStore;
 }
 
 export type RunAnalysisResult =
@@ -132,7 +139,14 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
   let tradingDaysToEarnings: number | null = null;
   if (!historical) {
     try {
-      tradingDaysToEarnings = await provider.getDaysToEarnings(symbol, now());
+      const earnings = await provider.getEarnings(symbol, now());
+      tradingDaysToEarnings = earnings.tradingDays;
+      // Capture the observed next-earnings DATE point-in-time (append-only) so a
+      // future historical replay/backtest can apply G5 for captured dates. Best-
+      // effort: a store failure must never affect the analysis.
+      if (earnings.nextDate && input.earningsStore) {
+        void input.earningsStore.record(symbol, earnings.nextDate).catch(() => undefined);
+      }
     } catch {
       tradingDaysToEarnings = null;
     }

@@ -11,6 +11,7 @@
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse, ScanRow } from './api-types';
 import type { BarCache, MarketDataProvider } from './contracts';
+import type { EarningsStore } from './earnings-store';
 import { runAnalysis } from './analyze-service';
 import { setupScore } from './setup-score';
 import { SYMBOL_PATTERN } from './symbols';
@@ -30,6 +31,8 @@ export interface RunScanInput {
    * universe). Ignored when `universe` is supplied.
    */
   followed?: readonly string[];
+  /** Optional append-only earnings log — the scan is the main capture path. */
+  earningsStore?: EarningsStore;
 }
 
 /** First sentence of the engine story, as the one-line driver (design §6.3). */
@@ -93,7 +96,7 @@ export async function runScan(input: RunScanInput): Promise<ScanResponse> {
   const universe = input.universe ?? (await buildUniverse(provider, input.followed ?? []));
 
   const results = await mapLimit(universe, WEB_CONFIG.scan.concurrency, (symbol) =>
-    runAnalysis({ symbol, timeframe, provider, cache, now }),
+    runAnalysis({ symbol, timeframe, provider, cache, now, earningsStore: input.earningsStore }),
   );
 
   let emitted = 0;
