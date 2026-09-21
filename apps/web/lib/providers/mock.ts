@@ -267,14 +267,16 @@ function generateProfile(symbol: string): CompanyProfile {
 }
 
 export class MockProvider implements MarketDataProvider {
-  async getBars(symbol: string, timeframe: Timeframe): Promise<Bar[]> {
+  async getBars(symbol: string, timeframe: Timeframe, asOf?: Date): Promise<Bar[]> {
     const sym = symbol.toUpperCase();
     if (sym === 'MOCKUNKNOWN') {
       throw new ProviderError('UNKNOWN_SYMBOL', `unknown symbol "${symbol}"`);
     }
-    const bars = generateBars(sym, timeframe);
+    const all = generateBars(sym, timeframe);
     // A brand-new listing has too little history for the engine to run.
-    return sym === 'MOCKNEW' ? bars.slice(-NEW_LISTING_BAR_COUNT) : bars;
+    const scoped = sym === 'MOCKNEW' ? all.slice(-NEW_LISTING_BAR_COUNT) : all;
+    // Point-in-time: only bars at/before the as-of instant (no lookahead).
+    return asOf ? scoped.filter((b) => b.t <= asOf.getTime()) : scoped;
   }
 
   async getDaysToEarnings(symbol: string): Promise<number | null> {

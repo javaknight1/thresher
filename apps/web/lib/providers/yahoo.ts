@@ -75,11 +75,15 @@ export class YahooProvider implements MarketDataProvider {
   }
 
   /** OHLCV per WEB_CONFIG.provider.lookback. Throws ProviderError on failure. */
-  async getBars(symbol: string, timeframe: Timeframe): Promise<Bar[]> {
+  async getBars(symbol: string, timeframe: Timeframe, asOf?: Date): Promise<Bar[]> {
     const { interval, days } = WEB_CONFIG.provider.lookback[timeframe];
+    // Point-in-time: the window ENDS at `asOf` (or now), and starts one lookback
+    // before it, so a historical analysis sees exactly what it would have then.
+    const endMs = asOf ? asOf.getTime() : Date.now();
     try {
       const result = await this.yf.chart(symbol, {
-        period1: new Date(Date.now() - days * DAY_MS),
+        period1: new Date(endMs - days * DAY_MS),
+        period2: new Date(endMs),
         interval,
         return: 'array',
       });
@@ -87,8 +91,11 @@ export class YahooProvider implements MarketDataProvider {
       for (const q of result.quotes) {
         // Yahoo pads sessions with null rows (halts, partial bars) — drop them.
         if (q.open == null || q.high == null || q.low == null || q.close == null) continue;
+        const t = q.date.getTime();
+        // Defensive no-lookahead guard: never include a bar after the as-of instant.
+        if (t > endMs) continue;
         bars.push({
-          t: q.date.getTime(),
+          t,
           o: q.open,
           h: q.high,
           l: q.low,

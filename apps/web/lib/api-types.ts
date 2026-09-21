@@ -26,12 +26,14 @@ export interface ChartPayload {
 export interface AnalyzeResponse {
   symbol: string;
   timeframe: Timeframe;
-  /** when the analysis ran (ISO) */
+  /** when the analysis is "as of" (ISO) — now, or a past instant for a historical replay */
   asOf: string;
-  /** when the bar data was fetched from the provider (ISO) — design §2.1 */
+  /** when the bar data was fetched (ISO); for a historical replay, the last bar's time */
   dataFreshness: string;
   /** true when bars were served past TTL (stale-while-revalidate / provider down) */
   stale: boolean;
+  /** true when this is a point-in-time replay of a past instant (no lookahead; earnings veto disabled) */
+  historical?: boolean;
   engineVersion: string;
   configHash: string;
   price: number;
@@ -63,6 +65,7 @@ export interface InsufficientHistoryResponse {
   asOf: string;
   dataFreshness: string;
   stale: boolean;
+  historical?: boolean;
   price: number;
   /** bars actually available for this timeframe */
   barsAvailable: number;

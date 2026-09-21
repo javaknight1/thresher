@@ -29,6 +29,7 @@ import TooNew from './TooNew';
 import SiteHeader from './SiteHeader';
 import Footer from './Footer';
 import DataAlert from './DataAlert';
+import AsOfControl from './AsOfControl';
 import FollowButton from './FollowButton';
 import ShareButton from './ShareButton';
 import PositionSizer from './PositionSizer';
@@ -67,6 +68,8 @@ export default function AnalyzeApp() {
     return isTimeframe(t) ? t : 'swing';
   });
   const [activeSymbol, setActiveSymbol] = useState<string | null>(null);
+  // Point-in-time replay: the as-of instant (ISO), or null when analyzing live.
+  const [asOf, setAsOf] = useState<string | null>(() => searchParams.get('asOf'));
   const [data, setData] = useState<AnalyzeData | null>(null);
 
   // On a fresh /analyze visit (no symbol or timeframe in the URL), apply the
@@ -90,31 +93,34 @@ export default function AnalyzeApp() {
   // Guards the deep-link effect from re-running when WE change the URL.
   const lastDeepLink = useRef<string | null>(null);
 
-  const loadAnalysis = useCallback(async (symbol: string, tf: Timeframe) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/v1/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`,
-        { cache: 'no-store' },
-      );
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as ApiError | null;
+  const loadAnalysis = useCallback(
+    async (symbol: string, tf: Timeframe, asOfIso: string | null) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const query =
+          `symbol=${encodeURIComponent(symbol)}&timeframe=${tf}` +
+          (asOfIso ? `&asOf=${encodeURIComponent(asOfIso)}` : '');
+        const res = await fetch(`/api/v1/analyze?${query}`, { cache: 'no-store' });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as ApiError | null;
+          setData(null);
+          setError({
+            code: body?.error ?? 'NETWORK',
+            message: body?.message ?? `Request failed (${res.status})`,
+          });
+          return;
+        }
+        setData((await res.json()) as AnalyzeData);
+      } catch {
         setData(null);
-        setError({
-          code: body?.error ?? 'NETWORK',
-          message: body?.message ?? `Request failed (${res.status})`,
-        });
-        return;
+        setError({ code: 'NETWORK', message: 'Could not reach the analysis service.' });
+      } finally {
+        setLoading(false);
       }
-      setData((await res.json()) as AnalyzeData);
-    } catch {
-      setData(null);
-      setError({ code: 'NETWORK', message: 'Could not reach the analysis service.' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Fundamentals load independently of the trade plan — a failure just hides the
   // panel and never surfaces as a page error (the trade plan is what matters).
@@ -141,11 +147,11 @@ export default function AnalyzeApp() {
   // Back button works between analyses. Bumping the guard prevents the deep-link
   // effect from treating our own URL change as a fresh navigation.
   const syncUrl = useCallback(
-    (symbol: string, tf: Timeframe) => {
-      lastDeepLink.current = `${symbol}:${tf}`;
-      router.replace(`/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`, {
-        scroll: false,
-      });
+    (symbol: string, tf: Timeframe, asOfIso: string | null) => {
+      lastDeepLink.current = `${symbol}:${tf}:${asOfIso ?? ''}`;
+      const q = new URLSearchParams({ symbol, timeframe: tf });
+      if (asOfIso) q.set('asOf', asOfIso);
+      router.replace(`/analyze?${q.toString()}`, { scroll: false });
     },
     [router],
   );
@@ -154,13 +160,14 @@ export default function AnalyzeApp() {
   // arrival (the URL is already correct), and user actions add their own
   // syncUrl so an in-mount router.replace never races React's mount.
   const run = useCallback(
-    (symbol: string, tf: Timeframe) => {
+    (symbol: string, tf: Timeframe, asOfIso: string | null) => {
       setActiveSymbol(symbol);
       setTimeframe(tf);
+      setAsOf(asOfIso);
       // Clear the prior symbol's result so the skeleton shows for the new one
       // (a timeframe switch keeps its data — see onTimeframe — so no flash).
       setData(null);
-      void loadAnalysis(symbol, tf);
+      void loadAnalysis(symbol, tf, asOfIso);
       void loadProfile(symbol);
     },
     [loadAnalysis, loadProfile],
@@ -168,10 +175,10 @@ export default function AnalyzeApp() {
 
   const onAnalyze = useCallback(
     (symbol: string) => {
-      syncUrl(symbol, timeframe);
-      run(symbol, timeframe);
+      syncUrl(symbol, timeframe, asOf);
+      run(symbol, timeframe, asOf);
     },
-    [run, syncUrl, timeframe],
+    [run, syncUrl, timeframe, asOf],
   );
 
   // Clicking a timeframe re-runs the analysis (not the symbol-scoped profile)
@@ -180,26 +187,39 @@ export default function AnalyzeApp() {
     (tf: Timeframe) => {
       setTimeframe(tf);
       if (activeSymbol) {
-        syncUrl(activeSymbol, tf);
-        void loadAnalysis(activeSymbol, tf);
+        syncUrl(activeSymbol, tf, asOf);
+        void loadAnalysis(activeSymbol, tf, asOf);
       } else {
         router.replace(`/analyze?timeframe=${tf}`, { scroll: false });
       }
     },
-    [activeSymbol, loadAnalysis, syncUrl, router],
+    [activeSymbol, loadAnalysis, syncUrl, router, asOf],
+  );
+
+  // The as-of control: re-run the current symbol at a past instant (or null = live).
+  const onAsOf = useCallback(
+    (asOfIso: string | null) => {
+      setAsOf(asOfIso);
+      if (activeSymbol) {
+        syncUrl(activeSymbol, timeframe, asOfIso);
+        void loadAnalysis(activeSymbol, timeframe, asOfIso);
+      }
+    },
+    [activeSymbol, timeframe, syncUrl, loadAnalysis],
   );
 
   // Deep link: ?symbol=&timeframe= (from the Scan board or a shared URL) runs
   // once on arrival. Keyed to the URL so navigating between rows re-runs.
   const urlSymbol = searchParams.get('symbol');
   const urlTf = searchParams.get('timeframe');
+  const urlAsOf = searchParams.get('asOf');
   useEffect(() => {
     if (!urlSymbol) return;
-    const key = `${urlSymbol}:${urlTf ?? ''}`;
+    const key = `${urlSymbol}:${urlTf ?? ''}:${urlAsOf ?? ''}`;
     if (lastDeepLink.current === key) return;
     lastDeepLink.current = key;
-    run(urlSymbol.toUpperCase(), isTimeframe(urlTf) ? urlTf : 'swing');
-  }, [urlSymbol, urlTf, run]);
+    run(urlSymbol.toUpperCase(), isTimeframe(urlTf) ? urlTf : 'swing', urlAsOf ?? null);
+  }, [urlSymbol, urlTf, urlAsOf, run]);
 
   return (
     <>
@@ -232,6 +252,18 @@ export default function AnalyzeApp() {
         loading={loading}
         freshness={data ? { dataFreshness: data.dataFreshness, stale: data.stale } : null}
       />
+
+      {activeSymbol && <AsOfControl asOf={asOf} onApply={onAsOf} />}
+
+      {/* Point-in-time replay banner — this analysis is "as of" a past instant. */}
+      {data && !error && data.historical && (
+        <DataAlert
+          variant="historical"
+          message={`This is a point-in-time replay — the engine sees only data up to ${formatFreshness(
+            data.dataFreshness,
+          )}. Earnings checks are disabled for historical dates.`}
+        />
+      )}
 
       {error && (
         <div role="alert" data-testid="error-banner" className={styles.error}>

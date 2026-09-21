@@ -17,8 +17,13 @@ export class ProviderError extends Error {
 }
 
 export interface MarketDataProvider {
-  /** OHLCV per the timeframe profile (WEB_CONFIG.provider.lookback). Throws ProviderError. */
-  getBars(symbol: string, timeframe: Timeframe): Promise<Bar[]>;
+  /**
+   * OHLCV per the timeframe profile (WEB_CONFIG.provider.lookback). Throws ProviderError.
+   * `asOf` (optional) requests a POINT-IN-TIME window ending at that instant — the
+   * lookback of bars up to and including `asOf`, and never a bar after it (no
+   * lookahead). Omit for the live window ending now. Powers historical analysis.
+   */
+  getBars(symbol: string, timeframe: Timeframe, asOf?: Date): Promise<Bar[]>;
   /**
    * Trading days (weekend-adjusted; holidays ignored — documented approximation)
    * until the next earnings report. null = unknown or none scheduled.

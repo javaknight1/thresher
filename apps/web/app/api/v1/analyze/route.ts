@@ -72,6 +72,27 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const timeframe: Timeframe = rawTimeframe;
 
+  // Optional point-in-time replay: ?asOf=<ISO>. Must be a valid, non-future
+  // instant (a future date would just be "now" with no bars after it).
+  const rawAsOf = params.get('asOf');
+  let asOf: Date | undefined;
+  if (rawAsOf != null && rawAsOf !== '') {
+    const parsed = new Date(rawAsOf);
+    if (Number.isNaN(parsed.getTime())) {
+      return errorResponse({
+        error: 'INVALID_REQUEST',
+        message: `invalid asOf "${rawAsOf}" — expected an ISO date-time`,
+      });
+    }
+    if (parsed.getTime() > Date.now()) {
+      return errorResponse({
+        error: 'INVALID_REQUEST',
+        message: 'asOf must be in the past',
+      });
+    }
+    asOf = parsed;
+  }
+
   // --- rate limit BEFORE any provider work (design §2.1) ---
   // Signed-in users are limited by userId at the authed tier; anon by IP.
   const { identity, authed } = await requestIdentity(req);
@@ -97,6 +118,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     timeframe,
     provider: getProvider(),
     cache: barCache,
+    asOf,
   });
 
   if (!result.ok) {

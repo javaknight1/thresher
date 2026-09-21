@@ -8,12 +8,20 @@
  */
 import styles from './DataAlert.module.css';
 
-export type DataAlertVariant = 'stale' | 'rate-limited' | 'unavailable';
+export type DataAlertVariant = 'stale' | 'rate-limited' | 'unavailable' | 'historical';
 
 const TITLES: Record<DataAlertVariant, string> = {
   stale: 'Showing cached data',
   'rate-limited': 'Request limit reached',
   unavailable: 'Live data unavailable',
+  historical: 'Historical analysis',
+};
+
+const ICONS: Record<DataAlertVariant, string> = {
+  stale: '⚠',
+  'rate-limited': '⚠',
+  unavailable: '⚠',
+  historical: '🕐',
 };
 
 export default function DataAlert({
@@ -32,7 +40,7 @@ export default function DataAlert({
       aria-live="polite"
     >
       <span className={styles.icon} aria-hidden="true">
-        ⚠
+        {ICONS[variant]}
       </span>
       <div>
         <div className={styles.title}>{TITLES[variant]}</div>
