@@ -73,7 +73,7 @@ export default async function InternalPage() {
 
   return (
     <>
-      <SiteHeader showBack />
+      <SiteHeader minimal />
       <div className={styles.page} data-testid="internal-page">
         <PageHero kicker="internal" title="Cached data">
           Everything Thresher currently has stored — read-only. Storage backend:{' '}

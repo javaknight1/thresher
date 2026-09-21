@@ -22,6 +22,8 @@ function openPalette() {
 export interface SiteHeaderProps {
   /** show a Back button (reference pages only) */
   showBack?: boolean;
+  /** logo-only bar — no nav links, command palette, or account menu (e.g. /internal) */
+  minimal?: boolean;
 }
 
 const LINKS = [
@@ -31,9 +33,23 @@ const LINKS = [
   { href: '/brokerage', label: 'Brokerage', Icon: IconBrokerage, testid: 'nav-brokerage' },
 ] as const;
 
-export default function SiteHeader({ showBack = false }: SiteHeaderProps) {
+export default function SiteHeader({ showBack = false, minimal = false }: SiteHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Logo-only bar: the Thresher mark and nothing else (no nav / palette / account).
+  if (minimal) {
+    return (
+      <header className={styles.bar} data-testid="site-header">
+        <div className={styles.inner}>
+          <div className={styles.left}>
+            <Brandmark href="/dashboard" />
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className={styles.bar} data-testid="site-header">
       <div className={styles.inner}>
