@@ -1,36 +1,107 @@
-.page {
-  max-width: 1000px;
+/* Sectioned ops-console layout: compact, tool-like (small header, side nav). */
+.shell {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 20px 20px 60px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  padding: 14px 16px 60px;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 20px;
 }
 
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sideHeading {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px 8px;
+}
+
+.sideNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sideLink {
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.86rem;
+  border: 1px solid transparent;
+}
+
+.sideLink:hover {
+  color: var(--text);
+  background: var(--panel2);
+}
+
+.sideLinkActive,
+.sideLinkActive:hover {
+  color: var(--text);
+  background: var(--panel);
+  border-color: var(--border);
+}
+
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sub {
+  margin: -8px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ---- cards / tables (shared) ---- */
 .card {
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 16px;
   background: var(--panel);
 }
 
 .h2 {
   margin: 0 0 10px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
 }
 
 .note {
   margin: -4px 0 12px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--muted);
   line-height: 1.5;
 }
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text);
   word-break: break-word;
 }
@@ -46,7 +117,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
 .table th {
@@ -62,4 +133,97 @@
   padding: 6px 10px;
   border-bottom: 1px solid var(--panel2);
   vertical-align: top;
+}
+
+/* ---- key/value stat grid ---- */
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  font-size: 0.82rem;
+}
+
+.kv dt {
+  color: var(--muted);
+}
+
+.kv dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+/* ---- status dots / badges ---- */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ok {
+  background: var(--long);
+}
+.bad {
+  background: var(--short);
+}
+.warn {
+  background: var(--amber);
+}
+
+.stale {
+  color: var(--amber);
+}
+
+/* ---- maintenance actions ---- */
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--panel2);
+}
+
+.input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  min-width: 120px;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--amber);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btnDanger {
+  border-color: var(--short);
+  color: var(--short);
+}
+.btnDanger:hover {
+  background: color-mix(in srgb, var(--short) 14%, var(--panel));
+}
+
+.result {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-left: 4px;
 }
