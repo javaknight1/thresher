@@ -16,6 +16,7 @@ const isProtected = createRouteMatcher([
   '/analyze(.*)',
   '/dashboard(.*)',
   '/settings(.*)',
+  '/internal(.*)',
   '/api/v1/(.*)',
 ]);
 
