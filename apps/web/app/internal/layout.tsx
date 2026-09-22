@@ -24,7 +24,7 @@ export default function InternalLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-      <Footer />
+      <Footer minimal />
     </>
   );
 }

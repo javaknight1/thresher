@@ -9,7 +9,22 @@ import Link from 'next/link';
 import Disclaimer from './Disclaimer';
 import styles from './Footer.module.css';
 
-export default function Footer() {
+export default function Footer({ minimal = false }: { minimal?: boolean }) {
+  // Internal/tool pages: version only — no reference links or trade disclaimer.
+  if (minimal) {
+    return (
+      <footer className={styles.footer} data-testid="site-footer">
+        <nav className={styles.links} aria-label="version">
+          {process.env.NEXT_PUBLIC_APP_VERSION && (
+            <span className={styles.version} data-testid="app-version">
+              v{process.env.NEXT_PUBLIC_APP_VERSION}
+            </span>
+          )}
+        </nav>
+      </footer>
+    );
+  }
+
   return (
     <footer className={styles.footer} data-testid="site-footer">
       <nav className={styles.links} aria-label="reference">
