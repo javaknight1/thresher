@@ -1,8 +1,8 @@
 /** /internal/integrity — Integrity checks (tier D): drift, orphans, gaps, freshness. */
 import type { Timeframe } from '@thresher/engine';
-import { createBarCache } from '../../../lib/cache';
 import { createFollowStore } from '../../../lib/follow-store';
 import { createEarningsStore } from '../../../lib/earnings-store';
+import { WEB_CONFIG } from '../../../lib/config';
 import { scanKeys, bucketByPrefix, redisConfigured } from '../../../lib/internal/admin';
 import styles from '../internal.module.css';
 
@@ -37,10 +37,10 @@ export default async function InternalIntegrity() {
   const redis = redisConfigured();
   const follows = createFollowStore();
   const earnings = createEarningsStore();
-  const cache = createBarCache();
 
   // Orphan keys (Upstash): keys matching no known prefix.
   const allKeys = redis ? await scanKeys('*', 500) : [];
+  const keySet = new Set(allKeys);
   const { orphans } = bucketByPrefix(allKeys);
 
   // Universe drift: symbols in the follow universe with zero followers.
@@ -50,16 +50,17 @@ export default async function InternalIntegrity() {
   );
   const orphanFollows = followerCounts.filter((x) => x.n === 0).map((x) => x.s);
 
-  // Coverage gaps: followed symbols with no cached bars for a timeframe.
+  // Coverage gaps: followed symbols with no cached bars for a timeframe —
+  // derived from the scanned key set (no per-symbol Redis calls; Cloudflare Free
+  // caps a request at 50 subrequests).
   const gaps: string[] = [];
-  await Promise.all(
-    universe.map(async (symbol) => {
-      for (const tf of TIMEFRAMES) {
-        const c = await cache.get(symbol, tf).catch(() => null);
-        if (!c) gaps.push(`${symbol}/${tf}`);
+  for (const symbol of universe) {
+    for (const tf of TIMEFRAMES) {
+      if (!keySet.has(`ohlcv:${symbol}:${WEB_CONFIG.provider.lookback[tf].interval}`)) {
+        gaps.push(`${symbol}/${tf}`);
       }
-    }),
-  );
+    }
+  }
 
   // Earnings freshness: symbols whose latest observed date is already in the past
   // (capture is behind — the next earnings has passed without a newer observation).

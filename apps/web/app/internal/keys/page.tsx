@@ -1,11 +1,12 @@
-/** /internal/keys — Data browser (tier C): raw key explorer + per-store views. */
+/** /internal/keys — Data browser (tier C). Subrequest-frugal: 2 pipelined key
+ *  lookups + derive the cached-bars grid from the single SCAN (Cloudflare Free
+ *  caps a request at 50 subrequests). */
 import type { Timeframe } from '@thresher/engine';
-import { createBarCache } from '../../../lib/cache';
 import { createFollowStore } from '../../../lib/follow-store';
 import { createEarningsStore } from '../../../lib/earnings-store';
 import { createScanStore } from '../../../lib/scan-store';
 import { WEB_CONFIG } from '../../../lib/config';
-import { scanKeys, keyInfo, redisConfigured } from '../../../lib/internal/admin';
+import { scanKeys, keyInfos, redisConfigured } from '../../../lib/internal/admin';
 import styles from '../internal.module.css';
 
 export const runtime = 'nodejs';
@@ -22,31 +23,18 @@ export default async function InternalKeys() {
   const follows = createFollowStore();
   const earnings = createEarningsStore();
   const scan = createScanStore();
-  const cache = createBarCache();
 
   const [allKeys, followed, earningsSymbols] = await Promise.all([
-    redis ? scanKeys('*', 500) : Promise.resolve([]),
+    redis ? scanKeys('*', 500) : Promise.resolve([] as string[]),
     follows.allSymbols().catch(() => [] as string[]),
     earnings.symbols().catch(() => [] as string[]),
   ]);
-
-  const infos = await Promise.all(allKeys.slice(0, KEY_DETAIL_CAP).map((k) => keyInfo(k)));
+  const keySet = new Set(allKeys);
+  const infos = await keyInfos(allKeys.slice(0, KEY_DETAIL_CAP));
 
   const symbols = [
     ...new Set([...followed, ...WEB_CONFIG.scan.curated, ...earningsSymbols]),
   ].sort();
-
-  const barRows = await Promise.all(
-    symbols.map(async (symbol) => ({
-      symbol,
-      cols: await Promise.all(
-        TIMEFRAMES.map(async (tf) => {
-          const c = await cache.get(symbol, tf).catch(() => null);
-          return c ? { count: c.bars.length, fetchedAt: c.fetchedAt } : null;
-        }),
-      ),
-    })),
-  );
 
   const earningsRows = await Promise.all(
     [...earningsSymbols].sort().map(async (symbol) => ({
@@ -66,13 +54,24 @@ export default async function InternalKeys() {
     }),
   );
 
+  // Cached-bars grid derived from the scanned key set — no extra Redis calls.
+  const barRows = symbols.map((symbol) => ({
+    symbol,
+    cells: TIMEFRAMES.map((tf) =>
+      keySet.has(`ohlcv:${symbol}:${WEB_CONFIG.provider.lookback[tf].interval}`),
+    ),
+  }));
+
   return (
     <>
       <h1 className={styles.h1}>Data browser</h1>
 
       <section className={styles.card}>
         <h2 className={styles.h2}>
-          Redis keys{redis ? ` (${allKeys.length}${allKeys.length > KEY_DETAIL_CAP ? `, showing ${KEY_DETAIL_CAP}` : ''})` : ''}
+          Redis keys
+          {redis
+            ? ` (${allKeys.length}${allKeys.length > KEY_DETAIL_CAP ? `, showing ${KEY_DETAIL_CAP}` : ''})`
+            : ''}
         </h2>
         {!redis ? (
           <p className={styles.note}>Requires Upstash — no server keyspace in in-memory mode.</p>
@@ -97,7 +96,7 @@ export default async function InternalKeys() {
                       {info.members != null
                         ? `${info.members} members`
                         : info.bytes != null
-                          ? `${info.bytes} B`
+                          ? `${info.bytes.toLocaleString()} B`
                           : '—'}
                     </td>
                   </tr>
@@ -109,7 +108,7 @@ export default async function InternalKeys() {
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.h2}>Cached bars</h2>
+        <h2 className={styles.h2}>Cached bars (✓ = key present)</h2>
         <div className={styles.scroll}>
           <table className={styles.table}>
             <thead>
@@ -124,15 +123,9 @@ export default async function InternalKeys() {
               {barRows.map((r) => (
                 <tr key={r.symbol}>
                   <td className={styles.mono}>{r.symbol}</td>
-                  {r.cols.map((c, i) => (
+                  {r.cells.map((cached, i) => (
                     <td key={TIMEFRAMES[i]} className={styles.mono}>
-                      {c ? (
-                        <>
-                          {c.count} bars<span className={styles.dim}> · {fmt(c.fetchedAt)}</span>
-                        </>
-                      ) : (
-                        <span className={styles.dim}>—</span>
-                      )}
+                      {cached ? '✓' : <span className={styles.dim}>—</span>}
                     </td>
                   ))}
                 </tr>

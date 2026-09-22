@@ -12,10 +12,12 @@ import { upstashConfigured } from '../upstash';
 /** Known key prefixes, for bucketing + the integrity/orphan checks. */
 export const KEY_PREFIXES: ReadonlyArray<{ prefix: string; label: string }> = [
   { prefix: 'ohlcv:', label: 'bars cache' },
+  { prefix: 'profile:', label: 'profile cache' },
   { prefix: 'thresher:follows:', label: 'follows' },
   { prefix: 'thresher:followers:', label: 'followers' },
   { prefix: 'thresher:earnings:', label: 'earnings' },
   { prefix: 'thresher:scan:', label: 'scan boards' },
+  { prefix: 'thresher:health', label: 'health' },
   { prefix: 'thresher:ratelimit', label: 'rate limit' },
 ];
 
@@ -98,6 +100,54 @@ export async function keyInfo(key: string): Promise<KeyInfo> {
     return { key, type, ttl, bytes, members };
   } catch {
     return base;
+  }
+}
+
+/**
+ * TYPE + TTL + size for MANY keys in just 2 pipelined round-trips (vs 3 calls
+ * each). Critical on Cloudflare's Free plan, which caps a request at 50
+ * subrequests — per-key calls blow that instantly. Size uses STRLEN (strings) /
+ * SCARD (sets), so no large values are transferred.
+ */
+export async function keyInfos(keys: string[]): Promise<KeyInfo[]> {
+  const blank = (k: string): KeyInfo => ({ key: k, type: null, ttl: null, bytes: null, members: null });
+  const r = client();
+  if (!r || keys.length === 0) return keys.map(blank);
+  try {
+    const p1 = r.pipeline();
+    for (const k of keys) {
+      p1.type(k);
+      p1.ttl(k);
+    }
+    const r1 = (await p1.exec()) as unknown[];
+    const types = keys.map((_, i) => (r1[i * 2] as string) ?? null);
+    const ttls = keys.map((_, i) => (r1[i * 2 + 1] as number) ?? null);
+
+    // Second pipeline: the right size command per type (skip others).
+    const p2 = r.pipeline();
+    const kind = keys.map((k, i) => {
+      if (types[i] === 'string') {
+        p2.strlen(k);
+        return 'string';
+      }
+      if (types[i] === 'set') {
+        p2.scard(k);
+        return 'set';
+      }
+      return null;
+    });
+    const r2 = kind.some(Boolean) ? ((await p2.exec()) as unknown[]) : [];
+
+    let j = 0;
+    return keys.map((k, i) => {
+      let bytes: number | null = null;
+      let members: number | null = null;
+      if (kind[i] === 'string') bytes = (r2[j++] as number) ?? null;
+      else if (kind[i] === 'set') members = (r2[j++] as number) ?? null;
+      return { key: k, type: types[i], ttl: ttls[i], bytes, members };
+    });
+  } catch {
+    return keys.map(blank);
   }
 }
 
