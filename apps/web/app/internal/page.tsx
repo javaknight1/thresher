@@ -11,10 +11,18 @@ import {
   KEY_PREFIXES,
   redisConfigured,
 } from '../../lib/internal/admin';
+import { fetchUpstashUsage } from '../../lib/internal/usage';
 import styles from './internal.module.css';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const mb = (b: number | null | undefined): string =>
+  b == null ? '—' : `${(b / 1024 / 1024).toFixed(1)} MB`;
+const pctOf = (used: number | null | undefined, cap: number | null | undefined): number | null =>
+  used != null && cap ? Math.round((used / cap) * 100) : null;
+const dotFor = (p: number | null): string =>
+  p == null ? styles.dim : p >= 90 ? styles.bad : p >= 70 ? styles.warn : styles.ok;
 
 const ENV_GROUPS: ReadonlyArray<{ label: string; keys: string[] }> = [
   { label: 'Upstash', keys: ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'] },
@@ -26,16 +34,26 @@ const ENV_GROUPS: ReadonlyArray<{ label: string; keys: string[] }> = [
 
 export default async function InternalOverview() {
   const redis = redisConfigured();
-  const [health, total, keys, followed, earningsSymbols] = await Promise.all([
+  const [health, total, keys, followed, earningsSymbols, usage] = await Promise.all([
     ping(),
     dbsize(),
     scanKeys('*', 1000),
     createFollowStore().allSymbols().catch(() => [] as string[]),
     createEarningsStore().symbols().catch(() => [] as string[]),
+    fetchUpstashUsage(),
   ]);
   const { counts } = bucketByPrefix(keys);
   const provider = process.env.THRESHER_PROVIDER === 'mock' ? 'mock' : 'yahoo';
   const appVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? 'dev';
+
+  // Project month-end command usage from the run-rate so far.
+  const cmdPct = pctOf(usage.commandsThisMonth, usage.commandLimit);
+  const storPct = pctOf(usage.storageBytes, usage.storageLimit);
+  const dom = new Date().getDate();
+  const dim = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const projected =
+    usage.commandsThisMonth != null ? Math.round((usage.commandsThisMonth / dom) * dim) : null;
+  const projPct = pctOf(projected, usage.commandLimit);
 
   return (
     <>
@@ -58,6 +76,47 @@ export default async function InternalOverview() {
           <dt>Provider</dt>
           <dd>{provider}</dd>
         </dl>
+      </section>
+
+      <section className={styles.card}>
+        <h2 className={styles.h2}>Upstash quota</h2>
+        {!usage.configured ? (
+          <p className={styles.note}>
+            Set UPSTASH_EMAIL / UPSTASH_API_KEY / UPSTASH_REDIS_ID (the Management API — a
+            separate credential from the Redis token) to enable the quota panel.
+          </p>
+        ) : usage.error ? (
+          <p className={styles.note}>Management API error: {usage.error}</p>
+        ) : (
+          <dl className={styles.kv}>
+            <dt>Database</dt>
+            <dd>
+              {usage.dbName ?? '—'}
+              {usage.region ? ` · ${usage.region}` : ''}
+            </dd>
+            <dt>Commands this month</dt>
+            <dd>
+              <span className={`${styles.dot} ${dotFor(cmdPct)}`} />
+              {usage.commandsThisMonth?.toLocaleString() ?? '—'} /{' '}
+              {usage.commandLimit?.toLocaleString() ?? '—'}
+              {cmdPct != null ? ` (${cmdPct}%)` : ''}
+            </dd>
+            <dt>Projected month-end</dt>
+            <dd>
+              {projected != null
+                ? `${projected.toLocaleString()}${projPct != null ? ` (${projPct}%)` : ''}`
+                : '—'}
+            </dd>
+            <dt>Storage</dt>
+            <dd>
+              <span className={`${styles.dot} ${dotFor(storPct)}`} />
+              {mb(usage.storageBytes)} / {mb(usage.storageLimit)}
+              {storPct != null ? ` (${storPct}%)` : ''}
+            </dd>
+            <dt>Bandwidth (month)</dt>
+            <dd>{mb(usage.bandwidthBytes)}</dd>
+          </dl>
+        )}
       </section>
 
       <section className={styles.card}>
