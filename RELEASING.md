@@ -59,9 +59,10 @@ A **release = bump the version + push a `v*` tag + publish the GitHub Release**.
    git tag vX.Y.Z && git push origin vX.Y.Z
    ```
 5. Publish the GitHub Release for the tag with the user-facing commit subjects
-   since the previous tag as the notes:
+   since the previous tag as the notes. **The title is the bare version — just
+   `vX.Y.Z`, no "— headline" suffix.** The headline/summary goes in the notes body.
    ```bash
-   gh release create vX.Y.Z --title "vX.Y.Z — <headline>" --notes "…"
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes "…"
    ```
 6. Confirm the deploy: Cloudflare already built from the `master` push — check
    `https://thresher.sharkfins.xyz` loads and a known ticker analyzes.
