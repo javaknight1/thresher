@@ -8,7 +8,14 @@
  */
 export { analyze, determine } from './analyze';
 export { buildSnapshot, minBars } from './indicators/snapshot';
-export { ENGINE_VERSION, DEFAULT_CONFIG, configHash, hashConfig } from './config';
+export {
+  ENGINE_VERSION,
+  DEFAULT_CONFIG,
+  CRYPTO_CONFIG,
+  configHash,
+  cryptoConfigHash,
+  hashConfig,
+} from './config';
 export type { EngineConfig } from './config';
 
 export { scoreTrend } from './families/trend';

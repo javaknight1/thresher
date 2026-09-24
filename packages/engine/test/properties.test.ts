@@ -81,7 +81,7 @@ describe('engine invariants over 120 random market shapes', () => {
           }
           expect(rr).toBeGreaterThanOrEqual(DEFAULT_CONFIG.gates.minRR);
           expect(result.confidence.score).toBeGreaterThanOrEqual(DEFAULT_CONFIG.gates.minConfidence);
-          expect(result.plan.sizing.example.shares).toBeGreaterThanOrEqual(0);
+          expect(result.plan.sizing.example.units).toBeGreaterThanOrEqual(0);
         }
 
         // Direction none always refuses at G1.

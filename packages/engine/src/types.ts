@@ -115,7 +115,10 @@ export interface Confidence {
 
 export interface Sizing {
   riskFraction: number;
-  example: { account: number; shares: number };
+  /** display label for a position unit: 'shares' (equity) or 'units' (crypto) */
+  unitLabel: string;
+  /** position size in tradable units — whole shares for equity, fractional for crypto */
+  example: { account: number; units: number };
 }
 
 export interface Plan {

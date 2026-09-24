@@ -7,7 +7,7 @@
  */
 import type { FamilyKey, Timeframe } from './types';
 
-export const ENGINE_VERSION = '1.0.0';
+export const ENGINE_VERSION = '1.1.0';
 
 export interface EngineConfig {
   indicators: {
@@ -90,7 +90,12 @@ export interface EngineConfig {
   story: { driverThreshold: number };
   /** trading-day veto windows per timeframe; null = flag only, never veto (design §2.2) */
   earningsVetoTradingDays: Record<Timeframe, number | null>;
-  sizing: { riskFraction: number; exampleAccount: number };
+  /**
+   * Position sizing. `unitStep` is the tradable increment the size is quantized
+   * DOWN to: 1 = whole shares (equity), a small fraction (crypto) so a high-priced
+   * coin doesn't floor to 0. `unitLabel` is the display noun (methodology II.8 / IV).
+   */
+  sizing: { riskFraction: number; exampleAccount: number; unitStep: number; unitLabel: string };
 }
 
 export const DEFAULT_CONFIG: EngineConfig = {
@@ -170,7 +175,31 @@ export const DEFAULT_CONFIG: EngineConfig = {
   gates: { minConfidence: 35, minRR: 1.2, evMargin: 0.25 },
   story: { driverThreshold: 0.3 },
   earningsVetoTradingDays: { intraday: 1, swing: 3, position: null },
-  sizing: { riskFraction: 0.01, exampleAccount: 25000 },
+  sizing: { riskFraction: 0.01, exampleAccount: 25000, unitStep: 1, unitLabel: 'shares' },
+};
+
+/**
+ * Crypto engine profile (methodology Part IV). Reuses the equity engine — same
+ * indicators, families, composite, direction, confidence, and gates G1–G4 — with
+ * TUNED constants for a 24/7, fatter-tailed, unreliable-volume asset:
+ *   - weights: momentum/trend up, volume DOWN (crypto volume is unreliable);
+ *   - wider ATR stop buffer/floor/cap + target projection;
+ *   - earnings veto (G5) OFF (no earnings);
+ *   - fractional sizing (unitStep 1e-6, "units").
+ * Everything else is inherited from DEFAULT_CONFIG. Carries its own hash so crypto
+ * provenance never collides with equity.
+ */
+export const CRYPTO_CONFIG: EngineConfig = {
+  ...DEFAULT_CONFIG,
+  weights: {
+    intraday: { trend: 0.3, momentum: 0.4, volume: 0.1, structure: 0.2 },
+    swing: { trend: 0.4, momentum: 0.3, volume: 0.1, structure: 0.2 },
+    position: { trend: 0.5, momentum: 0.2, volume: 0.1, structure: 0.2 },
+  },
+  stop: { bufferAtr: 0.6, capAtr: 3.0, floorAtr: 1.0 },
+  target: { ...DEFAULT_CONFIG.target, projectionAtrMult: 3.0 },
+  earningsVetoTradingDays: { intraday: null, swing: null, position: null },
+  sizing: { ...DEFAULT_CONFIG.sizing, unitStep: 1e-6, unitLabel: 'units' },
 };
 
 function fnv1a(input: string): number {
@@ -188,3 +217,4 @@ export function hashConfig(config: EngineConfig): string {
 }
 
 export const configHash = hashConfig(DEFAULT_CONFIG);
+export const cryptoConfigHash = hashConfig(CRYPTO_CONFIG);

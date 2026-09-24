@@ -86,7 +86,8 @@ describe('methodology II.9 worked example', () => {
   it('sizing example: $25,000 at 1% → 68 shares', () => {
     expect(result.plan!.sizing.riskFraction).toBe(0.01);
     expect(result.plan!.sizing.example.account).toBe(25_000);
-    expect(result.plan!.sizing.example.shares).toBe(68); // floor(250 / 3.64)
+    expect(result.plan!.sizing.example.units).toBe(68); // floor(250 / 3.64)
+    expect(result.plan!.sizing.unitLabel).toBe('shares');
   });
 
   it('EV is reported as uncalibrated', () => {
