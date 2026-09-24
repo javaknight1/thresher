@@ -16,6 +16,8 @@ interface Props {
   /** clear the box after choosing (the "add to watchlist" flow) vs. keep the ticker */
   clearOnSelect?: boolean;
   autoFocus?: boolean;
+  /** test-id prefix for the input/menu — scope it when two searches share a page */
+  testId?: string;
 }
 
 export default function SymbolSearch({
@@ -23,6 +25,7 @@ export default function SymbolSearch({
   placeholder = 'Search a company or ticker…',
   clearOnSelect = false,
   autoFocus = false,
+  testId = 'symbol-search',
 }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SymbolMatch[]>([]);
@@ -107,7 +110,7 @@ export default function SymbolSearch({
       </span>
       <input
         className={styles.input}
-        data-testid="symbol-search-input"
+        data-testid={`${testId}-input`}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={onKeyDown}
@@ -119,7 +122,7 @@ export default function SymbolSearch({
         autoFocus={autoFocus}
       />
       {open && (
-        <ul className={styles.menu} data-testid="symbol-search-menu" role="listbox">
+        <ul className={styles.menu} data-testid={`${testId}-menu`} role="listbox">
           {results.length === 0 && !loading && <li className={styles.empty}>No matches</li>}
           {results.map((m, i) => (
             <li

@@ -31,6 +31,7 @@ export default function DashboardFollows({ scope = 'equity' }: { scope?: FollowS
 
       <SymbolSearch
         clearOnSelect
+        testId={isCrypto ? 'crypto-symbol-search' : 'symbol-search'}
         placeholder={
           isCrypto ? 'Search a coin to follow (e.g. BTC-USD)…' : 'Search a company or ticker to follow…'
         }
