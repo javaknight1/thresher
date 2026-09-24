@@ -97,7 +97,7 @@ describe('runAnalysis — MOCKLONG/swing emits a LONG (§8 field-for-field)', ()
       expect(typeof body.plan.overheadWarning).toBe('boolean');
       expect(body.plan.sizing.riskFraction).toBeGreaterThan(0);
       expect(body.plan.sizing.example.account).toBeGreaterThan(0);
-      expect(Number.isInteger(body.plan.sizing.example.shares)).toBe(true);
+      expect(Number.isInteger(body.plan.sizing.example.units)).toBe(true);
       expect(typeof body.plan.ev.value).toBe('number');
       expect(body.plan.ev.calibrated).toBe(false);
     }

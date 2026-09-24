@@ -14,6 +14,8 @@ export interface PositionSizeInput {
   riskPct: number;
   entry: number;
   stop: number;
+  /** tradable increment to quantize DOWN to: 1 = whole shares, <1 = fractional (crypto) */
+  unitStep?: number;
 }
 
 export interface PositionSize {
@@ -34,13 +36,16 @@ export interface PositionSize {
 /** Null when inputs are incomplete/invalid (e.g. no account size, entry == stop). */
 export function positionSize(input: PositionSizeInput): PositionSize | null {
   const { accountSize, riskPct, entry, stop } = input;
+  const unitStep = input.unitStep && input.unitStep > 0 ? input.unitStep : 1;
   if (!(accountSize > 0) || !(riskPct > 0) || !(entry > 0)) return null;
 
   const riskPerShare = Math.abs(entry - stop);
   if (!(riskPerShare > 0)) return null;
 
   const dollarRisk = accountSize * (riskPct / 100);
-  const shares = Math.floor(dollarRisk / riskPerShare);
+  // Quantize DOWN to the tradable increment: whole shares (step 1) or fractional
+  // units (crypto), so actual risk never exceeds the intended risk.
+  const shares = Math.floor(dollarRisk / riskPerShare / unitStep) * unitStep;
   const positionValue = shares * entry;
   const actualRisk = shares * riskPerShare;
   const positionPct = (positionValue / accountSize) * 100;

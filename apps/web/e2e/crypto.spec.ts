@@ -16,3 +16,20 @@ test('crypto nav tab opens the /crypto board', async ({ page }) => {
   await expect(page.getByTestId('scan-tab-top')).toBeVisible();
   await expect(page.getByTestId('market-closed')).toHaveCount(0);
 });
+
+test('analyzing a coin shows the crypto panel and fractional sizing, no fundamentals', async ({
+  page,
+}) => {
+  await page.goto('/analyze?symbol=BTC-USD&timeframe=swing');
+
+  // Crypto context panel replaces the equity company/fundamentals panel.
+  await expect(page.getByTestId('crypto-panel')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('company-panel')).toHaveCount(0);
+
+  // The sizer is present; once sized it labels fractional units, not shares.
+  const sizer = page.getByTestId('position-sizer');
+  await expect(sizer).toBeVisible();
+  await sizer.getByTestId('ps-account').fill('100000');
+  await expect(sizer.getByTestId('ps-result')).toBeVisible();
+  await expect(sizer.getByText('units')).toBeVisible();
+});

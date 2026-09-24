@@ -1,0 +1,14 @@
+.root {
+  padding: 18px;
+}
+
+.heading {
+  margin: 0 0 8px;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--muted);
+}

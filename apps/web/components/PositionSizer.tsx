@@ -19,7 +19,19 @@ const LEGACY_RISK_KEY = 'thresher:riskPct';
 const money = (x: number) => `$${Math.round(x).toLocaleString()}`;
 const pct = (fraction: number) => `${(fraction * 100).toFixed(1)}%`;
 
-export default function PositionSizer({ entry, stop }: { entry: number; stop: number }) {
+export default function PositionSizer({
+  entry,
+  stop,
+  unitStep = 1,
+  unitLabel = 'shares',
+}: {
+  entry: number;
+  stop: number;
+  /** tradable increment: 1 = whole shares (equity), <1 = fractional (crypto) */
+  unitStep?: number;
+  /** display noun for a unit ('shares' | 'units') */
+  unitLabel?: string;
+}) {
   const { prefs, loaded, setPref, setPrefs } = usePrefs();
   const account = prefs.accountSize;
   const riskPct = prefs.riskPct;
@@ -46,7 +58,10 @@ export default function PositionSizer({ entry, stop }: { entry: number; stop: nu
   const onRisk = (r: number) => setPref('riskPct', r);
 
   const accountSize = Number(account);
-  const result = positionSize({ accountSize, riskPct, entry, stop });
+  const result = positionSize({ accountSize, riskPct, entry, stop, unitStep });
+  const fractional = unitStep < 1;
+  const fmtUnits = (n: number) =>
+    n.toLocaleString(undefined, { maximumFractionDigits: fractional ? 6 : 0 });
 
   return (
     <section className={`panel ${styles.root}`} data-testid="position-sizer">
@@ -91,9 +106,9 @@ export default function PositionSizer({ entry, stop }: { entry: number; stop: nu
         <div className={styles.result} data-testid="ps-result">
           <div className={styles.sharesRow}>
             <span className={styles.shares} data-testid="ps-shares">
-              {result.shares.toLocaleString()}
+              {fmtUnits(result.shares)}
             </span>
-            <span className={styles.sharesLabel}>shares</span>
+            <span className={styles.sharesLabel}>{unitLabel}</span>
           </div>
           <dl className={styles.stats}>
             <div className={styles.stat}>
@@ -111,7 +126,7 @@ export default function PositionSizer({ entry, stop }: { entry: number; stop: nu
               </dd>
             </div>
             <div className={styles.stat}>
-              <dt>Risk / share</dt>
+              <dt>Risk / {fractional ? 'unit' : 'share'}</dt>
               <dd>{money(result.riskPerShare)}</dd>
             </div>
           </dl>
@@ -123,8 +138,8 @@ export default function PositionSizer({ entry, stop }: { entry: number; stop: nu
       )}
 
       <p className={styles.note}>
-        Illustrative — whole shares are floored so your actual risk never exceeds the amount you
-        set. Not advice.
+        Illustrative — the size is quantized down to the tradable increment so your actual risk
+        never exceeds the amount you set. Not advice.
       </p>
     </section>
   );

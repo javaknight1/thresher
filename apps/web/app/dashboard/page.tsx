@@ -57,6 +57,10 @@ export default function DashboardPage() {
           <DashboardFollows />
         </section>
 
+        <section className={styles.watchlist}>
+          <DashboardFollows scope="crypto" />
+        </section>
+
         <section className={styles.quick}>
           {QUICK.map(({ href, title, body, Icon, accent }) => (
             <Link

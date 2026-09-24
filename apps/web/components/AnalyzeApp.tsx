@@ -18,6 +18,7 @@ import type {
 } from '../lib/api-types';
 import { WEB_CONFIG } from '../lib/config';
 import { usePrefs } from '../lib/prefs';
+import { assetClassOf } from '../lib/asset-class';
 import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
 import Controls from './Controls';
 import TradeCard from './TradeCard';
@@ -25,6 +26,7 @@ import TradeLadder from './TradeLadder';
 import TradeStory from './TradeStory';
 import FamilyGrid from './FamilyGrid';
 import CompanyPanel from './CompanyPanel';
+import CryptoPanel from './CryptoPanel';
 import TooNew from './TooNew';
 import SiteHeader from './SiteHeader';
 import Footer from './Footer';
@@ -168,7 +170,13 @@ export default function AnalyzeApp() {
       // (a timeframe switch keeps its data — see onTimeframe — so no flash).
       setData(null);
       void loadAnalysis(symbol, tf, asOfIso);
-      void loadProfile(symbol);
+      // Crypto has no company fundamentals — skip the profile fetch + panel.
+      if (assetClassOf(symbol) === 'crypto') {
+        setProfile(null);
+        setProfileFailed(false);
+      } else {
+        void loadProfile(symbol);
+      }
     },
     [loadAnalysis, loadProfile],
   );
@@ -220,6 +228,8 @@ export default function AnalyzeApp() {
     lastDeepLink.current = key;
     run(urlSymbol.toUpperCase(), isTimeframe(urlTf) ? urlTf : 'swing', urlAsOf ?? null);
   }, [urlSymbol, urlTf, urlAsOf, run]);
+
+  const isCrypto = activeSymbol ? assetClassOf(activeSymbol) === 'crypto' : false;
 
   return (
     <>
@@ -299,7 +309,14 @@ export default function AnalyzeApp() {
             <TradeCard data={data} />
             <TradeLadder data={data} />
           </div>
-          {data.plan && <PositionSizer entry={data.plan.entry} stop={data.plan.stop} />}
+          {data.plan && (
+            <PositionSizer
+              entry={data.plan.entry}
+              stop={data.plan.stop}
+              unitStep={isCrypto ? 1e-6 : 1}
+              unitLabel={isCrypto ? 'units' : 'shares'}
+            />
+          )}
           <PriceChart
             chart={data.chart}
             plan={data.plan}
@@ -311,11 +328,15 @@ export default function AnalyzeApp() {
         </>
       )}
 
+      {/* Crypto has no fundamentals — a plain context panel stands in for the
+          equity CompanyPanel. */}
+      {isCrypto && activeSymbol && <CryptoPanel symbol={activeSymbol} />}
+
       {/* Company context loads independently of the trade plan, so it shows even
           when the engine can't run (e.g. a brand-new listing). */}
-      {profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
-      {!profile && !profileFailed && activeSymbol && <ProfileSkeleton />}
-      {!profile && profileFailed && activeSymbol && (
+      {!isCrypto && profile && <CompanyPanel data={profile} onPeerSelect={onAnalyze} />}
+      {!isCrypto && !profile && !profileFailed && activeSymbol && <ProfileSkeleton />}
+      {!isCrypto && !profile && profileFailed && activeSymbol && (
         <div data-testid="profile-error" className={styles.profileError}>
           Couldn’t load company details for {activeSymbol}.{' '}
           <button className={styles.retry} onClick={() => void loadProfile(activeSymbol)}>

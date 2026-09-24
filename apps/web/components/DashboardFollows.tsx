@@ -7,17 +7,22 @@
  */
 import SymbolSearch from './SymbolSearch';
 import FollowedList from './FollowedList';
-import { useFollows } from '../lib/follows-client';
+import { useFollows, type FollowScope } from '../lib/follows-client';
+import { assetClassOf } from '../lib/asset-class';
 import styles from './DashboardFollows.module.css';
 
-export default function DashboardFollows() {
-  const { isFollowing, toggle, symbols, max } = useFollows();
+export default function DashboardFollows({ scope = 'equity' }: { scope?: FollowScope } = {}) {
+  const { isFollowing, toggle, symbols, max } = useFollows(scope);
   const atCap = max !== null && symbols.length >= max;
+  const isCrypto = scope === 'crypto';
 
   return (
-    <section className={styles.wrap} data-testid="dashboard-follows">
+    <section
+      className={styles.wrap}
+      data-testid={isCrypto ? 'dashboard-crypto-follows' : 'dashboard-follows'}
+    >
       <div className={styles.head}>
-        <h2 className={styles.title}>Your watchlist</h2>
+        <h2 className={styles.title}>{isCrypto ? 'Your crypto watchlist' : 'Your watchlist'}</h2>
         <span className={styles.count}>
           {symbols.length}
           {max !== null && <span className={styles.of}> / {max}</span>}
@@ -26,8 +31,12 @@ export default function DashboardFollows() {
 
       <SymbolSearch
         clearOnSelect
-        placeholder="Search a company or ticker to follow…"
+        placeholder={
+          isCrypto ? 'Search a coin to follow (e.g. BTC-USD)…' : 'Search a company or ticker to follow…'
+        }
         onSelect={(m) => {
+          // The crypto watchlist only follows coins; the equity one only stocks.
+          if (isCrypto !== (assetClassOf(m.symbol) === 'crypto')) return;
           if (!isFollowing(m.symbol) && !atCap) void toggle(m.symbol);
         }}
       />
@@ -38,7 +47,7 @@ export default function DashboardFollows() {
       )}
 
       <div className={styles.listWrap}>
-        <FollowedList />
+        <FollowedList scope={scope} />
       </div>
     </section>
   );

@@ -12,9 +12,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Timeframe } from '@thresher/engine';
 import type { SymbolQuote } from '../lib/contracts';
-import type { ScanRow } from '../lib/api-types';
-import { useFollows } from '../lib/follows-client';
-import { fetchAllBoards, bestBySymbol } from '../lib/board-client';
+import type { ScanResponse, ScanRow } from '../lib/api-types';
+import { useFollows, type FollowScope } from '../lib/follows-client';
+import { fetchAllBoards, fetchBoard, bestBySymbol, TF_VIEWS } from '../lib/board-client';
 import Logo from './Logo';
 import styles from './FollowedList.module.css';
 
@@ -26,8 +26,8 @@ const TF_LABEL: Record<Timeframe, string> = {
 
 const money = (x: number) => `$${x.toFixed(2)}`;
 
-export default function FollowedList() {
-  const { symbols, loaded, toggle } = useFollows();
+export default function FollowedList({ scope = 'equity' }: { scope?: FollowScope } = {}) {
+  const { symbols, loaded, toggle } = useFollows(scope);
   const [quotes, setQuotes] = useState<Record<string, SymbolQuote>>({});
   const [setups, setSetups] = useState<Record<string, ScanRow>>({});
   const key = symbols.join(',');
@@ -54,17 +54,23 @@ export default function FollowedList() {
   }, [key, symbols.length]);
 
   // Best setup per symbol across all candle sizes (from the cached boards) — the
-  // exact trade to show on each line. Boards are global, so fetch once.
+  // exact trade to show on each line. Equity reads the bulk boards snapshot;
+  // crypto reads its own scoped boards (served from cache).
   useEffect(() => {
     let cancelled = false;
-    fetchAllBoards().then((boards) => {
-      if (cancelled) return;
-      setSetups(Object.fromEntries(bestBySymbol(boards)));
+    const load =
+      scope === 'crypto'
+        ? Promise.all(TF_VIEWS.map((tf) => fetchBoard(tf, false, 'crypto'))).then(
+            (rs) => rs.map((r) => r.board).filter((b): b is ScanResponse => b !== null),
+          )
+        : fetchAllBoards();
+    load.then((boards) => {
+      if (!cancelled) setSetups(Object.fromEntries(bestBySymbol(boards)));
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scope]);
 
   if (loaded && symbols.length === 0) {
     return (
