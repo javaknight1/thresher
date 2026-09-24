@@ -6,8 +6,8 @@
  * (NEXT_PUBLIC_LOGO_DEV_TOKEN). Crypto uses CoinCap's keyless icon set, keyed by
  * the base symbol (BTC-USD → btc) — so coin logos work even without the logo.dev
  * token. Anything missing / failing to load falls back to the deterministic
- * Monogram, so it's never broken. Logos sit on a white rounded tile so they stay
- * visible on the dark theme.
+ * Monogram, so it's never broken. Logos render at their natural shape/aspect
+ * with no background tile or padding (a round coin logo reads as round).
  */
 import { useState } from 'react';
 import Monogram from './Monogram';
@@ -45,10 +45,7 @@ export default function Logo({ ticker, domain, label, size = 24 }: LogoProps) {
   const src = srcFor(ticker, domain, size);
   if (!src || failed) return <Monogram label={label} size={size} />;
   return (
-    <span
-      className={styles.tile}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.22) }}
-    >
+    <span className={styles.tile} style={{ width: size, height: size }}>
       {/* plain img: no next/image remote config, works on workerd */}
       <img
         className={styles.img}

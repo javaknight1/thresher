@@ -3,15 +3,12 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .img {
-  /* Fill the chip edge-to-edge (object-fit keeps aspect) so we don't add our
-     own padding on top of the logo's — a logo's intrinsic padding is all that
-     remains. Wide wordmark logos still letterbox top/bottom by nature. */
+  /* Show the logo at its natural shape and aspect within the slot — no added
+     padding, no background tile, no cropping. Transparent areas stay
+     transparent, so a round coin logo reads as round, not a white square. */
   width: 100%;
   height: 100%;
   object-fit: contain;
