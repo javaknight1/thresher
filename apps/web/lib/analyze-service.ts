@@ -20,6 +20,7 @@ import type { BarCache, BarsWithFreshness, MarketDataProvider } from './contract
 import { getBarsWithFreshness } from './cache';
 import { checkGuardrails } from './guardrails';
 import { WEB_CONFIG } from './config';
+import { assetClassOf, engineConfigFor } from './asset-class';
 import type { EarningsStore } from './earnings-store';
 
 export interface RunAnalysisInput {
@@ -72,6 +73,10 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
   // otherwise now.
   const analysisTime = input.asOf ?? now();
   const historical = input.asOf != null;
+  // Asset class picks the versioned engine config (crypto = tuned Part IV profile)
+  // and drives the crypto-specific guardrails + earnings-off behavior.
+  const assetClass = assetClassOf(symbol);
+  const config = engineConfigFor(assetClass);
 
   // 1. Bars. Live: the stale-while-revalidate cache (design §2.1). Historical:
   // a direct point-in-time fetch — the window is immutable, so there's no
@@ -101,7 +106,7 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
 
   // 2. Universe guardrails (design §11.1) — refuse untradeable junk with the
   // human-readable reason.
-  const guard = checkGuardrails(fresh.bars, timeframe);
+  const guard = checkGuardrails(fresh.bars, timeframe, assetClass);
   if (!guard.ok) {
     return {
       ok: false,
@@ -133,11 +138,11 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
     return { ok: true, body: partial };
   }
 
-  // 3. Earnings distance — best-effort, and only for a LIVE analysis. A
-  // historical replay can't reconstruct the point-in-time earnings calendar from
-  // the free feed, so it passes "unknown" (the engine's G5 becomes flag-only).
+  // 3. Earnings distance — best-effort, for a LIVE equity analysis only. Crypto
+  // has no earnings (G5 is off in its config), and a historical replay can't
+  // reconstruct the point-in-time earnings calendar — both pass "unknown".
   let tradingDaysToEarnings: number | null = null;
-  if (!historical) {
+  if (!historical && assetClass !== 'crypto') {
     try {
       const earnings = await provider.getEarnings(symbol, now());
       tradingDaysToEarnings = earnings.tradingDays;
@@ -158,7 +163,7 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<RunAnalysisR
   // clean DATA_UNAVAILABLE instead.
   let result;
   try {
-    result = analyze(fresh.bars, DEFAULT_CONFIG, {
+    result = analyze(fresh.bars, config, {
       symbol,
       timeframe,
       tradingDaysToEarnings,

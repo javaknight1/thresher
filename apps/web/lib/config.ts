@@ -87,6 +87,28 @@ export const WEB_CONFIG = {
     maxPerUser: 5,
     defaultWatchlist: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMD'],
   },
+  /**
+   * Crypto (methodology Part IV). Spot coins in Yahoo's `BASE-USD` form. Follows
+   * are UNLIMITED (no cap) and live in a separate namespace; the /crypto board
+   * ranks the curated coins ∪ the user's crypto follows, capped at
+   * `maxScanUniverse` per run (subrequest budget). Guardrails are 24/7-aware.
+   */
+  crypto: {
+    curatedCoins: [
+      'BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD',
+      'ADA-USD', 'AVAX-USD', 'LINK-USD', 'LTC-USD', 'DOT-USD',
+    ],
+    defaultWatchlist: ['BTC-USD', 'ETH-USD', 'SOL-USD'],
+    samples: ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD'],
+    /** hard cap on coins scanned per /crypto board run (Cloudflare subrequest budget) */
+    maxScanUniverse: 20,
+    /** universe guardrails for crypto: no price floor (sub-dollar coins are legit); 24h volume normalization */
+    guardrails: {
+      minPrice: 0,
+      minAvgDollarVolume: 1_000_000,
+      perDayFactor: { intraday: 24, swing: 1, position: 0.143 } as Record<Timeframe, number>,
+    },
+  },
 } as const;
 
 /**

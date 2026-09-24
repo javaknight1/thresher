@@ -113,4 +113,16 @@ describe('UpstashFollowStore', () => {
     expect(new Set(await s.allSymbols())).toEqual(new Set(['TSLA']));
     expect(await s.list('u1')).toEqual(['TSLA']);
   });
+
+  it('namespaces (follows vs cryptofollows) share Redis but isolate keys', async () => {
+    const redis = new FakeRedis() as unknown as Redis;
+    const equity = new UpstashFollowStore(redis, 'follows');
+    const crypto = new UpstashFollowStore(redis, 'cryptofollows');
+    await equity.add('u1', 'AAPL');
+    await crypto.add('u1', 'BTC-USD');
+    expect(await equity.list('u1')).toEqual(['AAPL']);
+    expect(await crypto.list('u1')).toEqual(['BTC-USD']);
+    expect(await equity.allSymbols()).toEqual(['AAPL']);
+    expect(await crypto.allSymbols()).toEqual(['BTC-USD']);
+  });
 });

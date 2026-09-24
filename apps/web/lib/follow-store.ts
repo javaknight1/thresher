@@ -143,28 +143,43 @@ export class SupabaseFollowStore implements FollowStore {
 }
 
 /**
- * Upstash (Redis) follow store. Uses sets:
- *   thresher:follows:{userId}   — the user's symbols
- *   thresher:followers:{symbol} — who follows a symbol (notification fan-out)
- *   thresher:follows:symbols    — the distinct union (the scan universe)
- * This is durable and **shared across Cloudflare isolates** — unlike the
- * in-memory store, which is per-isolate (so a second add can land on a fresh
- * isolate that only knows the new symbol, silently "replacing" the list).
+ * Follow-store namespaces. `follows` is the equity set (capped, existing keys —
+ * do NOT change them); `cryptofollows` is the isolated, uncapped crypto set.
+ */
+export type FollowNamespace = 'follows' | 'cryptofollows';
+const NS_KEYS: Record<FollowNamespace, { user: string; followers: string; universe: string }> = {
+  follows: { user: 'follows', followers: 'followers', universe: 'thresher:follows:symbols' },
+  cryptofollows: {
+    user: 'cryptofollows',
+    followers: 'cryptofollowers',
+    universe: 'thresher:cryptofollows:symbols',
+  },
+};
+
+/**
+ * Upstash (Redis) follow store, namespaced. For `follows` the keys are exactly
+ * the historical `thresher:follows:{userId}` / `thresher:followers:{symbol}` /
+ * `thresher:follows:symbols` (backward-compatible); `cryptofollows` uses a
+ * parallel `thresher:cryptofollows*` keyspace. Durable + shared across isolates.
  */
 export class UpstashFollowStore implements FollowStore {
   private readonly redis: Redis;
+  private readonly keys: { user: string; followers: string; universe: string };
 
-  constructor(redis?: Redis) {
+  constructor(redis?: Redis, ns: FollowNamespace = 'follows') {
     this.redis = redis ?? Redis.fromEnv();
+    this.keys = NS_KEYS[ns];
   }
 
   private userKey(userId: string): string {
-    return `thresher:follows:${userId}`;
+    return `thresher:${this.keys.user}:${userId}`;
   }
   private followersKey(symbol: string): string {
-    return `thresher:followers:${symbol}`;
+    return `thresher:${this.keys.followers}:${symbol}`;
   }
-  private readonly universeKey = 'thresher:follows:symbols';
+  private get universeKey(): string {
+    return this.keys.universe;
+  }
 
   async list(userId: string): Promise<string[]> {
     const members = (await this.redis.smembers(this.userKey(userId))) as string[];
@@ -209,10 +224,12 @@ export class UpstashFollowStore implements FollowStore {
  * routes) but is per-isolate in production — fine for local/CI, not for a
  * deployed multi-isolate Worker, which is why Upstash sits ahead of it.
  */
-export function createFollowStore(): FollowStore {
+export function createFollowStore(ns: FollowNamespace = 'follows'): FollowStore {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (url && serviceKey) return new SupabaseFollowStore(url, serviceKey);
-  if (upstashConfigured()) return new UpstashFollowStore();
-  return globalSingleton('thresher:follow-store', () => new MemoryFollowStore());
+  // Supabase currently backs only the equity `follows` namespace; crypto follows
+  // fall through to Upstash/memory until the Postgres schema gains an asset class.
+  if (ns === 'follows' && url && serviceKey) return new SupabaseFollowStore(url, serviceKey);
+  if (upstashConfigured()) return new UpstashFollowStore(undefined, ns);
+  return globalSingleton(`thresher:follow-store:${ns}`, () => new MemoryFollowStore());
 }

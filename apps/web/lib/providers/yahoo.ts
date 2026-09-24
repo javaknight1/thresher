@@ -191,8 +191,8 @@ export class YahooProvider implements MarketDataProvider {
         const symbol = str(item.symbol);
         if (!symbol) continue;
         const type = str(item.quoteType)?.toUpperCase() ?? null;
-        // Tradeable instruments only (skip currencies, indices, etc.).
-        if (type && !['EQUITY', 'ETF'].includes(type)) continue;
+        // Tradeable instruments only (skip forex, indices, etc.); crypto included.
+        if (type && !['EQUITY', 'ETF', 'CRYPTOCURRENCY'].includes(type)) continue;
         out.push({
           symbol: symbol.toUpperCase(),
           name: str(item.longname) ?? str(item.shortname),

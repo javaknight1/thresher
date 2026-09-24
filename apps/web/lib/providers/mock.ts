@@ -44,6 +44,9 @@ const MOCK_CATALOG: ReadonlyArray<{ symbol: string; name: string }> = [
   { symbol: 'JPM', name: 'JPMorgan Chase & Co.' },
   { symbol: 'XOM', name: 'Exxon Mobil Corporation' },
   { symbol: 'MOCKLONG', name: 'Mocklong Industries, Inc.' },
+  { symbol: 'BTC-USD', name: 'Bitcoin USD' },
+  { symbol: 'ETH-USD', name: 'Ethereum USD' },
+  { symbol: 'SOL-USD', name: 'Solana USD' },
 ];
 
 /** Engine needs ≥130 bars (minBarsFactor × MACD slow); 300 gives headroom. */
@@ -87,6 +90,16 @@ const SPECS: Record<string, SeriesSpec> = {
     noise: 0.01,
     meanRevert: 0.1,
     volumeBase: 2_000_000,
+    upVolumeBias: 0.25,
+  },
+  // A clean-long coin at a high unit price — exercises the crypto path end to
+  // end (CRYPTO_CONFIG, fractional sizing so it doesn't floor to 0 units).
+  'BTC-USD': {
+    base: 60_000,
+    drift: 0.0025,
+    noise: 0.01,
+    meanRevert: 0.1,
+    volumeBase: 40_000,
     upVolumeBias: 0.25,
   },
   // Flat baseline oscillating ±3% with heavy noise: ADX collapses, SMAs

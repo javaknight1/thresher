@@ -8,6 +8,7 @@
  */
 import type { Bar, Timeframe } from '@thresher/engine';
 import { WEB_CONFIG } from './config';
+import type { AssetClass } from './asset-class';
 
 export type GuardrailResult = { ok: true } | { ok: false; reason: string };
 
@@ -31,8 +32,16 @@ function fmtDollars(value: number): string {
  * intraday bars are hourly and position bars are weekly) against the dollar
  * volume floor. Boundary values pass: rejection requires strictly below.
  */
-export function checkGuardrails(bars: readonly Bar[], timeframe: Timeframe): GuardrailResult {
-  const { minPrice, minAvgDollarVolume, perDayFactor, windowBars } = WEB_CONFIG.guardrails;
+export function checkGuardrails(
+  bars: readonly Bar[],
+  timeframe: Timeframe,
+  assetClass: AssetClass = 'equity',
+): GuardrailResult {
+  // Crypto uses its own floors (no price floor for sub-dollar coins) and 24/7
+  // volume normalization; `windowBars` is shared. See methodology Part IV.
+  const g = assetClass === 'crypto' ? WEB_CONFIG.crypto.guardrails : WEB_CONFIG.guardrails;
+  const { minPrice, minAvgDollarVolume, perDayFactor } = g;
+  const { windowBars } = WEB_CONFIG.guardrails;
 
   if (bars.length === 0) {
     return { ok: false, reason: 'no price data returned — cannot assess tradability' };
