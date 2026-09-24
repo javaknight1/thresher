@@ -55,6 +55,11 @@
   filter: brightness(1.08);
 }
 
+.boardSearch {
+  max-width: 460px;
+  margin: 2px 0 14px;
+}
+
 .scanTabs {
   display: flex;
   gap: 6px;

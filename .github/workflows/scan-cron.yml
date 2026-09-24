@@ -15,37 +15,43 @@ concurrency:
 
 jobs:
   refresh:
-    # One job per candle size, so each shows its own pass/fail + error body, and
-    # one timeframe failing never hides the others (fail-fast: false).
+    # One job per (scope, candle size), so each shows its own pass/fail + error
+    # body, and one failing never hides the others (fail-fast: false). Equity and
+    # crypto boards are keyed separately in the store.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        scope: [equity, crypto]
         timeframe: [intraday, swing, position]
-    name: refresh (${{ matrix.timeframe }})
+    name: refresh (${{ matrix.scope }} · ${{ matrix.timeframe }})
     steps:
-      - name: Refresh the ${{ matrix.timeframe }} board
+      - name: Refresh the ${{ matrix.scope }} ${{ matrix.timeframe }} board
         env:
           BASE_URL: https://thresher.sharkfins.xyz
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           TF: ${{ matrix.timeframe }}
+          SCOPE: ${{ matrix.scope }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "CRON_SECRET not set — add it as a repo secret"; exit 1
           fi
+          # Equity is the default scope (no param); crypto passes &scope=crypto.
+          scope_param=""
+          [ "$SCOPE" = "crypto" ] && scope_param="&scope=crypto"
           body=$(mktemp)
           code=000
           # One retry: a cold scan can time out on the first hit.
           for attempt in 1 2; do
             code=$(curl -s -o "$body" -w "%{http_code}" --max-time 150 \
-              "$BASE_URL/api/cron/scan?timeframe=$TF&key=$CRON_SECRET")
+              "$BASE_URL/api/cron/scan?timeframe=$TF$scope_param&key=$CRON_SECRET")
             [ "$code" = "200" ] && break
-            echo "attempt $attempt: $TF -> HTTP $code :: $(cat "$body")"
+            echo "attempt $attempt: $SCOPE/$TF -> HTTP $code :: $(cat "$body")"
             [ "$attempt" = "1" ] && sleep 10
           done
           if [ "$code" = "200" ]; then
-            echo "✓ $TF -> HTTP 200 :: $(cat "$body")"
+            echo "✓ $SCOPE/$TF -> HTTP 200 :: $(cat "$body")"
           else
-            echo "::error title=cron $TF failed (HTTP $code)::$(cat "$body")"
+            echo "::error title=cron $SCOPE/$TF failed (HTTP $code)::$(cat "$body")"
             exit 1
           fi

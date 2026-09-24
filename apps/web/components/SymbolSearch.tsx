@@ -7,6 +7,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { SymbolMatch } from '../lib/contracts';
+import { assetClassOf } from '../lib/asset-class';
 import Logo from './Logo';
 import styles from './SymbolSearch.module.css';
 
@@ -18,6 +19,8 @@ interface Props {
   autoFocus?: boolean;
   /** test-id prefix for the input/menu — scope it when two searches share a page */
   testId?: string;
+  /** keep only matches of this asset class (e.g. the /crypto board → coins only) */
+  assetClass?: 'equity' | 'crypto';
 }
 
 export default function SymbolSearch({
@@ -26,6 +29,7 @@ export default function SymbolSearch({
   clearOnSelect = false,
   autoFocus = false,
   testId = 'symbol-search',
+  assetClass,
 }: Props) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SymbolMatch[]>([]);
@@ -53,7 +57,11 @@ export default function SymbolSearch({
         });
         const body = (await res.json()) as { results?: SymbolMatch[] };
         if (seq.current === id) {
-          setResults(body.results ?? []);
+          const all = body.results ?? [];
+          const filtered = assetClass
+            ? all.filter((m) => assetClassOf(m.symbol) === assetClass)
+            : all;
+          setResults(filtered);
           setOpen(true);
           setActive(-1);
         }
@@ -64,7 +72,7 @@ export default function SymbolSearch({
       }
     }, 220);
     return () => clearTimeout(timer);
-  }, [q]);
+  }, [q, assetClass]);
 
   // Close when clicking outside.
   useEffect(() => {

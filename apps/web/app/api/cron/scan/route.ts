@@ -22,8 +22,16 @@ export const runtime = 'nodejs';
 
 const barCache = createBarCache();
 const earningsStore = createEarningsStore();
-const boardStore = createScanStore();
-const followStore = createFollowStore();
+// Per-scope stores, keyed so the equity and crypto boards never overwrite each
+// other (mirrors the reader route). Crypto follows live in their own namespace.
+const boardStores = {
+  equity: createScanStore('equity'),
+  crypto: createScanStore('crypto'),
+} as const;
+const followStores = {
+  equity: createFollowStore('follows'),
+  crypto: createFollowStore('cryptofollows'),
+} as const;
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -41,30 +49,42 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'invalid timeframe' }, { status: 400 });
   }
   const timeframe = rawTimeframe as Timeframe;
+  const scope = params.get('scope') === 'crypto' ? 'crypto' : 'equity';
 
   const startedAt = Date.now();
   // Track how far we got so a failure says *what* broke, not just "500".
   let stage: 'follows' | 'scan' | 'store' = 'follows';
   let universeSize = 0;
   try {
-    const followed = await followStore.allSymbols().catch(() => []);
+    const followed = await followStores[scope].allSymbols().catch(() => []);
 
     stage = 'scan';
-    const board = await runScan({
-      timeframe,
-      provider: getProvider(),
-      cache: barCache,
-      followed,
-      earningsStore,
-    });
+    let board;
+    if (scope === 'crypto') {
+      // Crypto universe = crypto follows ∪ curated coins (follows first), capped
+      // for the subrequest budget. No earnings (G5 is off for crypto).
+      const universe = [
+        ...new Set([...followed, ...WEB_CONFIG.crypto.curatedCoins].map((s) => s.toUpperCase())),
+      ].slice(0, WEB_CONFIG.crypto.maxScanUniverse);
+      board = await runScan({ timeframe, provider: getProvider(), cache: barCache, universe });
+    } else {
+      board = await runScan({
+        timeframe,
+        provider: getProvider(),
+        cache: barCache,
+        followed,
+        earningsStore,
+      });
+    }
     universeSize = board.universeSize;
 
     stage = 'store';
-    await boardStore.set(timeframe, board, WEB_CONFIG.cache.ttlSeconds[timeframe]);
+    await boardStores[scope].set(timeframe, board, WEB_CONFIG.cache.ttlSeconds[timeframe]);
 
     return NextResponse.json(
       {
         ok: true,
+        scope,
         timeframe,
         emitted: board.emitted,
         refused: board.refused,
@@ -80,13 +100,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const name = err instanceof Error ? err.name : 'Error';
     // Surfaces in the Cloudflare Worker logs (stack included there).
     console.error(
-      `[cron/scan] ${timeframe} failed during "${stage}" after ${Date.now() - startedAt}ms: ${name}: ${message}`,
+      `[cron/scan] ${scope}/${timeframe} failed during "${stage}" after ${Date.now() - startedAt}ms: ${name}: ${message}`,
       err instanceof Error ? err.stack : undefined,
     );
     // …and in the HTTP body so the scheduler's log shows the cause, not just 500.
     return NextResponse.json(
       {
         ok: false,
+        scope,
         timeframe,
         stage,
         error: `${name}: ${message}`,

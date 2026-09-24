@@ -176,3 +176,29 @@ discipline (≥ 90 % coverage on new code; MockProvider only — never call Yaho
 - A crypto-specific event veto (token unlocks, halvings, listings) once a data source
   exists — the crypto analog of G5.
 - Fractional-unit display precision per coin (BTC vs a sub-dollar alt).
+
+## 9. Post-ship findings (v0.15.1)
+
+- **Yahoo numeric-suffix symbols (ticker collisions).** Several major coins whose base
+  ticker collides with an equity/other coin get a numeric suffix on Yahoo, NOT the plain
+  `BASE-USD` form: Uniswap = `UNI7083-USD`, PEPE = `PEPE24478-USD`, Sui = `SUI20947-USD`,
+  Bittensor = `TAO22974-USD`, The Graph = `GRT6719-USD`, Stacks = `STX4847-USD`. The plain
+  `UNI-USD`/`PEPE-USD`/`SUI-USD` return **"no data — may be delisted."** These are
+  currently **unsupported end-to-end** because `SYMBOL_PATTERN` (`lib/symbols`) is
+  `/^[A-Z][A-Z.-]{0,9}$/` — it rejects **digits** (and symbols longer than 10 chars). So
+  they can't be searched, analyzed, or curated today. `1INCH-USD` is out for the same
+  reason (leading digit).
+  - **Follow-up to support them:** broaden `SYMBOL_PATTERN` to allow digits + a longer
+    max, AND add a **display-name map** (`UNI7083-USD` → "Uniswap (UNI)") so the board /
+    search don't show the raw suffixed symbol. Then add them to `curatedCoins`.
+- **Curated universe (v0.15.1):** ~56 majors whose plain `BASE-USD` symbol was
+  **verified to return daily bars** on live Yahoo (`config.ts crypto.curatedCoins`). The
+  board scans the first `maxScanUniverse` (24 — crypto makes no earnings subrequests, so
+  it has budget above the equity cap of 20). Delisted/absent coins are simply skipped.
+- **Crypto board is now cron-precomputed** (`/api/cron/scan?scope=crypto`, GitHub Action
+  matrix scope × timeframe), so reads are warm like the equity board.
+- **On-board coin search** added to `/crypto` (filtered to crypto matches) → Analyze.
+- **Better data provider (open):** a paid feed (real-time, full/unsuffixed crypto
+  universe, reliable volume, + more accurate equity quotes) would fix the collision-symbol
+  problem AND the volume-quality caveat AND enable crypto movers/discovery (item 5/6). It
+  slots behind the existing `MarketDataProvider` seam.

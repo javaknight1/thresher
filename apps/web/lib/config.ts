@@ -94,14 +94,38 @@ export const WEB_CONFIG = {
    * `maxScanUniverse` per run (subrequest budget). Guardrails are 24/7-aware.
    */
   crypto: {
+    /**
+     * Major coins whose plain Yahoo `BASE-USD` symbol resolves (each verified to
+     * return daily bars). Ordered roughly by market cap — the board scans the
+     * first `maxScanUniverse`. Coins whose Yahoo symbol carries a numeric suffix
+     * (ticker collisions: Uniswap=`UNI7083-USD`, PEPE=`PEPE24478-USD`,
+     * SUI=`SUI20947-USD`, TAO=`TAO22974-USD`, …) are omitted: `SYMBOL_PATTERN`
+     * (lib/symbols) rejects digits, so they're unsupported until that + a
+     * display-name map land. Delisted/absent coins are simply skipped by the scan.
+     */
     curatedCoins: [
-      'BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD',
-      'ADA-USD', 'AVAX-USD', 'LINK-USD', 'LTC-USD', 'DOT-USD',
+      'BTC-USD', 'ETH-USD', 'XRP-USD', 'SOL-USD', 'DOGE-USD',
+      'ADA-USD', 'TRX-USD', 'LINK-USD', 'AVAX-USD', 'XLM-USD',
+      'SHIB-USD', 'DOT-USD', 'LTC-USD', 'BCH-USD', 'HBAR-USD',
+      'ETC-USD', 'NEAR-USD', 'ICP-USD', 'AAVE-USD', 'ARB-USD',
+      'VET-USD', 'ATOM-USD', 'RENDER-USD', 'ALGO-USD', 'FIL-USD',
+      'OP-USD', 'INJ-USD', 'TIA-USD', 'SEI-USD', 'MKR-USD',
+      'XTZ-USD', 'RUNE-USD', 'FLOW-USD', 'LDO-USD', 'FET-USD',
+      'DYDX-USD', 'SAND-USD', 'MANA-USD', 'AXS-USD', 'CRV-USD',
+      'APE-USD', 'WIF-USD', 'BONK-USD', 'JASMY-USD', 'QNT-USD',
+      'CHZ-USD', 'ENS-USD', 'SNX-USD', 'JTO-USD', 'PYTH-USD',
+      'SUSHI-USD', 'EGLD-USD', 'KAVA-USD', 'ROSE-USD', 'ZEC-USD',
+      'DASH-USD',
     ],
     defaultWatchlist: ['BTC-USD', 'ETH-USD', 'SOL-USD'],
     samples: ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD'],
-    /** hard cap on coins scanned per /crypto board run (Cloudflare subrequest budget) */
-    maxScanUniverse: 20,
+    /**
+     * Hard cap on coins scanned per /crypto board run. Crypto makes NO earnings
+     * subrequests (unlike equities), so it has headroom above the equity cap of
+     * 20 while staying under the Cloudflare subrequest budget. The scheduled cron
+     * warms the board off the request path (see /api/cron/scan).
+     */
+    maxScanUniverse: 24,
     /** universe guardrails for crypto: no price floor (sub-dollar coins are legit); 24h volume normalization */
     guardrails: {
       minPrice: 0,

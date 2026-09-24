@@ -17,6 +17,20 @@ test('crypto nav tab opens the /crypto board', async ({ page }) => {
   await expect(page.getByTestId('market-closed')).toHaveCount(0);
 });
 
+test('the /crypto board has a coin search that opens the Analyze view', async ({ page }) => {
+  await page.goto('/crypto');
+  const input = page.getByTestId('crypto-board-search-input');
+  await expect(input).toBeVisible({ timeout: 30_000 });
+
+  await input.fill('BTC');
+  const result = page.getByTestId('search-result-BTC-USD');
+  await expect(result).toBeVisible({ timeout: 10_000 });
+  await result.click();
+
+  await expect(page).toHaveURL(/\/analyze\?symbol=BTC-USD/);
+  await expect(page.getByTestId('crypto-panel')).toBeVisible({ timeout: 30_000 });
+});
+
 test('analyzing a coin shows the crypto panel and fractional sizing, no fundamentals', async ({
   page,
 }) => {

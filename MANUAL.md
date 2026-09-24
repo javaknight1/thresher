@@ -111,8 +111,11 @@ absent → the app runs open (so local CI / e2e are unaffected). Landing page is
 The app reads the Top board from Upstash and never recomputes on a normal page
 load (that's what stopped the "different results each reload" bug). A scheduled
 job keeps those boards fresh via `GET /api/cron/scan?timeframe=…&key=CRON_SECRET`
-(one call per candle size). The scheduler is a **GitHub Action**
-(`.github/workflows/scan-cron.yml`, every 30 min during US market hours).
+(one call per candle size; add `&scope=crypto` for the crypto board — equity is
+the default). The scheduler is a **GitHub Action** (`.github/workflows/scan-cron.yml`,
+every 30 min during US market hours) with an **equity + crypto × 3-timeframe**
+matrix, so both boards are precomputed. (Crypto trades 24/7; the US-hours schedule
+is a cost choice, not a data limit.)
 
 1. Pick a random secret (e.g. `openssl rand -hex 24`).
 2. **Cloudflare:** add `CRON_SECRET` as a **runtime** Variable/Secret on the

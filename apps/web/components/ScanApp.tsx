@@ -22,6 +22,7 @@ import Footer from './Footer';
 import DataAlert from './DataAlert';
 import ShareButton from './ShareButton';
 import PageHero from './PageHero';
+import SymbolSearch from './SymbolSearch';
 import { ScanBoardSkeleton } from './Skeleton';
 import { useFollows } from '../lib/follows-client';
 import { usePrefs } from '../lib/prefs';
@@ -224,6 +225,17 @@ function ScanView({ scope }: { scope: BoardScope }) {
         <PageHero kicker={HERO[scope].kicker} title={HERO[scope].title}>
           {HERO[scope].sub}
         </PageHero>
+
+        {scope === 'crypto' && (
+          <div className={styles.boardSearch} data-testid="crypto-board-search">
+            <SymbolSearch
+              testId="crypto-board-search"
+              assetClass="crypto"
+              placeholder="Search any coin to analyze (e.g. BTC-USD, Solana)…"
+              onSelect={(m) => router.push(`/analyze?symbol=${encodeURIComponent(m.symbol)}`)}
+            />
+          </div>
+        )}
 
         <div className={styles.scanTabs} role="group" aria-label="board view">
         {TABS.map((t) => (
