@@ -9,8 +9,9 @@ import { NextRequest } from 'next/server';
 import { GET, POST, DELETE } from '../app/api/v1/follows/route';
 import { WEB_CONFIG } from '../lib/config';
 
-function req(method: string, ip: string, body?: unknown): NextRequest {
-  return new NextRequest('http://localhost/api/v1/follows', {
+function req(method: string, ip: string, body?: unknown, scope?: 'crypto'): NextRequest {
+  const url = scope ? 'http://localhost/api/v1/follows?scope=crypto' : 'http://localhost/api/v1/follows';
+  return new NextRequest(url, {
     method,
     headers: { 'x-forwarded-for': ip, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -62,5 +63,29 @@ describe('/api/v1/follows', () => {
     // Re-following an existing symbol at the cap still succeeds (idempotent).
     const dupe = await POST(req('POST', ip, { symbol: 'FA' }));
     expect(dupe.status).toBe(201);
+  });
+});
+
+describe('/api/v1/follows?scope=crypto (unlimited)', () => {
+  it('has no cap (max null) and accepts more than the equity limit', async () => {
+    const ip = '10.9.0.1';
+    const coins = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD', 'ADA-USD', 'AVAX-USD'];
+    for (const c of coins) {
+      const res = await POST(req('POST', ip, { symbol: c }, 'crypto'));
+      expect(res.status).toBe(201); // never 422, even past the equity cap of 5
+    }
+    const body = await (await GET(req('GET', ip, undefined, 'crypto'))).json();
+    expect(body.max).toBeNull();
+    expect(body.symbols.length).toBe(coins.length);
+  });
+
+  it('is isolated from the equity scope', async () => {
+    const ip = '10.9.0.2';
+    await POST(req('POST', ip, { symbol: 'AAPL' })); // equity
+    await POST(req('POST', ip, { symbol: 'BTC-USD' }, 'crypto')); // crypto
+    const eq = await (await GET(req('GET', ip))).json();
+    const cr = await (await GET(req('GET', ip, undefined, 'crypto'))).json();
+    expect(eq.symbols).toEqual(['AAPL']);
+    expect(cr.symbols).toEqual(['BTC-USD']);
   });
 });

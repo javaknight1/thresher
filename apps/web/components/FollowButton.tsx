@@ -7,13 +7,16 @@
  */
 import { useState } from 'react';
 import { useFollows } from '../lib/follows-client';
+import { assetClassOf } from '../lib/asset-class';
 import styles from './FollowButton.module.css';
 
 export default function FollowButton({ symbol }: { symbol: string }) {
-  const { isFollowing, toggle, symbols, max } = useFollows();
+  // Crypto follows live in their own (uncapped) scope; equities in theirs.
+  const scope = assetClassOf(symbol) === 'crypto' ? 'crypto' : 'equity';
+  const { isFollowing, toggle, symbols, max } = useFollows(scope);
   const [busy, setBusy] = useState(false);
   const following = isFollowing(symbol);
-  const atCap = !following && symbols.length >= max;
+  const atCap = max !== null && !following && symbols.length >= max;
 
   const onClick = async () => {
     setBusy(true);

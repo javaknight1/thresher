@@ -12,14 +12,15 @@ import styles from './DashboardFollows.module.css';
 
 export default function DashboardFollows() {
   const { isFollowing, toggle, symbols, max } = useFollows();
-  const atCap = symbols.length >= max;
+  const atCap = max !== null && symbols.length >= max;
 
   return (
     <section className={styles.wrap} data-testid="dashboard-follows">
       <div className={styles.head}>
         <h2 className={styles.title}>Your watchlist</h2>
         <span className={styles.count}>
-          {symbols.length} <span className={styles.of}>/ {max}</span>
+          {symbols.length}
+          {max !== null && <span className={styles.of}> / {max}</span>}
         </span>
       </div>
 

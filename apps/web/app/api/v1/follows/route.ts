@@ -24,9 +24,17 @@ import { WEB_CONFIG } from '../../../../lib/config';
 
 export const runtime = 'nodejs';
 
-const store = createFollowStore();
+// Two independent scopes: equity (capped) and crypto (unlimited). See follow-store.
+const equityStore = createFollowStore('follows');
+const cryptoStore = createFollowStore('cryptofollows');
 const MAX = WEB_CONFIG.follows.maxPerUser;
 const HEADERS = { 'cache-control': 'no-store' } as const;
+
+/** Pick the store + cap for the request's scope (`?scope=crypto` → unlimited). */
+function scopeOf(req: Request): { store: ReturnType<typeof createFollowStore>; max: number | null } {
+  const scope = new URL(req.url).searchParams.get('scope');
+  return scope === 'crypto' ? { store: cryptoStore, max: null } : { store: equityStore, max: MAX };
+}
 
 /** Resolve the follow identity, or null when auth is on but the caller is anon. */
 async function resolveIdentity(req: Request): Promise<string | null> {
@@ -42,8 +50,8 @@ function unauthorized(): NextResponse {
   );
 }
 
-function ok(symbols: string[], status = 200): NextResponse {
-  const body: FollowsResponse = { symbols, max: MAX };
+function ok(symbols: string[], max: number | null, status = 200): NextResponse {
+  const body: FollowsResponse = { symbols, max };
   return NextResponse.json(body, { status, headers: HEADERS });
 }
 
@@ -57,12 +65,14 @@ async function readSymbol(req: Request): Promise<string | null> {
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const identity = await resolveIdentity(req);
   if (!identity) return unauthorized();
-  return ok(await store.list(identity));
+  const { store, max } = scopeOf(req);
+  return ok(await store.list(identity), max);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const identity = await resolveIdentity(req);
   if (!identity) return unauthorized();
+  const { store, max } = scopeOf(req);
 
   const symbol = await readSymbol(req);
   if (!symbol) {
@@ -72,28 +82,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Enforce the per-user cap — but never reject a symbol that's already followed
-  // (idempotent add), so re-following at the cap isn't a spurious error.
-  const current = await store.list(identity);
-  if (!current.includes(symbol) && current.length >= MAX) {
-    return NextResponse.json(
-      {
-        error: 'FOLLOW_LIMIT',
-        message: `You can follow up to ${MAX} symbols. Unfollow one to add another.`,
-        symbols: current,
-        max: MAX,
-      },
-      { status: 422, headers: HEADERS },
-    );
+  // Enforce the per-user cap (equity only; crypto is unlimited, max === null) —
+  // but never reject a symbol that's already followed (idempotent add), so
+  // re-following at the cap isn't a spurious error.
+  if (max !== null) {
+    const current = await store.list(identity);
+    if (!current.includes(symbol) && current.length >= max) {
+      return NextResponse.json(
+        {
+          error: 'FOLLOW_LIMIT',
+          message: `You can follow up to ${max} symbols. Unfollow one to add another.`,
+          symbols: current,
+          max,
+        },
+        { status: 422, headers: HEADERS },
+      );
+    }
   }
 
   await store.add(identity, symbol);
-  return ok(await store.list(identity), 201);
+  return ok(await store.list(identity), max, 201);
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const identity = await resolveIdentity(req);
   if (!identity) return unauthorized();
+  const { store, max } = scopeOf(req);
 
   const symbol = await readSymbol(req);
   if (!symbol) {
@@ -104,5 +118,5 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   }
 
   await store.remove(identity, symbol);
-  return ok(await store.list(identity));
+  return ok(await store.list(identity), max);
 }

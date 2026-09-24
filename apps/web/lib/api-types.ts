@@ -153,8 +153,8 @@ export interface ScanResponse {
 export interface FollowsResponse {
   /** symbols the signed-in user follows */
   symbols: string[];
-  /** the per-user follow cap (WEB_CONFIG.follows.maxPerUser) */
-  max: number;
+  /** the per-user follow cap (WEB_CONFIG.follows.maxPerUser); null = unlimited (crypto) */
+  max: number | null;
 }
 
 export type ApiErrorCode =

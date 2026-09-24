@@ -1,64 +1,82 @@
 'use client';
 
 /**
- * Client-side follows store shared across the app (one fetch, many consumers)
- * via a module-level snapshot + useSyncExternalStore. The ★ button, the board's
- * "Following" tab, and the dashboard manager all read the same state, so a
- * toggle anywhere updates everywhere. Writes are optimistic and reconciled with
- * the server response; a rejected write (e.g. the follow cap) reverts.
+ * Client-side follows store, shared across the app (one fetch, many consumers)
+ * via a module-level snapshot + useSyncExternalStore. Two independent SCOPES —
+ * `equity` (capped) and `crypto` (unlimited) — each keep their own snapshot and
+ * hit `/api/v1/follows[?scope=crypto]`. The ★ button, the board's "Following"
+ * tab, and the dashboard manager all read the same per-scope state, so a toggle
+ * anywhere updates everywhere. Writes are optimistic and reconciled with the
+ * server; a rejected write (e.g. the equity cap) reverts.
  */
 import { useCallback, useSyncExternalStore } from 'react';
 import { normalizeSymbol } from './symbols';
 
+export type FollowScope = 'equity' | 'crypto';
+
 export interface FollowsState {
   symbols: string[];
-  max: number;
+  /** per-user cap; null = unlimited (crypto) */
+  max: number | null;
   loaded: boolean;
   error: string | null;
 }
 
 const EMPTY: FollowsState = { symbols: [], max: 20, loaded: false, error: null };
-let state: FollowsState = EMPTY;
-const subscribers = new Set<() => void>();
+const EMPTY_CRYPTO: FollowsState = { ...EMPTY, max: null };
 
-function emit(): void {
-  for (const cb of subscribers) cb();
+interface Client {
+  state: FollowsState;
+  subscribers: Set<() => void>;
+  loadStarted: boolean;
 }
-function set(next: Partial<FollowsState>): void {
-  state = { ...state, ...next };
-  emit();
+const clients: Record<FollowScope, Client> = {
+  equity: { state: EMPTY, subscribers: new Set(), loadStarted: false },
+  crypto: { state: EMPTY_CRYPTO, subscribers: new Set(), loadStarted: false },
+};
+
+const apiUrl = (scope: FollowScope): string =>
+  scope === 'crypto' ? '/api/v1/follows?scope=crypto' : '/api/v1/follows';
+
+function set(scope: FollowScope, next: Partial<FollowsState>): void {
+  const c = clients[scope];
+  c.state = { ...c.state, ...next };
+  for (const cb of c.subscribers) cb();
 }
 
-let loadStarted = false;
-async function ensureLoaded(): Promise<void> {
-  if (loadStarted) return;
-  loadStarted = true;
+async function ensureLoaded(scope: FollowScope): Promise<void> {
+  const c = clients[scope];
+  if (c.loadStarted) return;
+  c.loadStarted = true;
   try {
-    const res = await fetch('/api/v1/follows', { cache: 'no-store' });
+    const res = await fetch(apiUrl(scope), { cache: 'no-store' });
     if (res.ok) {
-      const body = (await res.json()) as { symbols: string[]; max: number };
-      set({ symbols: body.symbols, max: body.max, loaded: true });
+      const body = (await res.json()) as { symbols: string[]; max: number | null };
+      set(scope, { symbols: body.symbols, max: body.max, loaded: true });
     } else {
-      // 401 (signed out) or error → treat as no follows, but mark loaded.
-      set({ loaded: true });
+      set(scope, { loaded: true });
     }
   } catch {
-    set({ loaded: true });
+    set(scope, { loaded: true });
   }
 }
 
 /** Add or remove a follow (optimistic; reverts on failure). */
-export async function toggleFollow(symbol: string): Promise<{ ok: boolean; error?: string }> {
+export async function toggleFollow(
+  symbol: string,
+  scope: FollowScope = 'equity',
+): Promise<{ ok: boolean; error?: string }> {
+  const c = clients[scope];
   const sym = normalizeSymbol(symbol);
-  const following = state.symbols.includes(sym);
+  const following = c.state.symbols.includes(sym);
   const method = following ? 'DELETE' : 'POST';
-  const prev = state.symbols;
-  set({
+  const prev = c.state.symbols;
+  set(scope, {
     symbols: following ? prev.filter((s) => s !== sym) : [...prev, sym],
     error: null,
   });
   try {
-    const res = await fetch('/api/v1/follows', {
+    const res = await fetch(apiUrl(scope), {
       method,
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ symbol: sym }),
@@ -66,46 +84,56 @@ export async function toggleFollow(symbol: string): Promise<{ ok: boolean; error
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { message?: string } | null;
-      set({ symbols: prev, error: body?.message ?? 'Could not update follow.' });
+      set(scope, { symbols: prev, error: body?.message ?? 'Could not update follow.' });
       return { ok: false, error: body?.message };
     }
-    const body = (await res.json()) as { symbols: string[]; max: number };
-    set({ symbols: body.symbols, max: body.max, error: null });
+    const body = (await res.json()) as { symbols: string[]; max: number | null };
+    set(scope, { symbols: body.symbols, max: body.max, error: null });
     return { ok: true };
   } catch {
-    set({ symbols: prev, error: 'Network error.' });
+    set(scope, { symbols: prev, error: 'Network error.' });
     return { ok: false, error: 'Network error.' };
   }
 }
 
 /** Seed a new user's starter watchlist (skips any already followed). */
-export async function seedDefaultFollows(symbols: readonly string[]): Promise<void> {
-  await ensureLoaded();
+export async function seedDefaultFollows(
+  symbols: readonly string[],
+  scope: FollowScope = 'equity',
+): Promise<void> {
+  await ensureLoaded(scope);
   for (const raw of symbols) {
     const sym = normalizeSymbol(raw);
-    if (!state.symbols.includes(sym)) await toggleFollow(sym);
+    if (!clients[scope].state.symbols.includes(sym)) await toggleFollow(sym, scope);
   }
 }
 
-function subscribe(cb: () => void): () => void {
-  subscribers.add(cb);
-  void ensureLoaded();
-  return () => subscribers.delete(cb);
-}
-function getSnapshot(): FollowsState {
-  return state;
-}
-// Server render (and initial hydration) shows the empty set — the real list
-// arrives after mount, so there's no hydration mismatch.
-function getServerSnapshot(): FollowsState {
-  return EMPTY;
+// Stable per-scope store fns (created once → useSyncExternalStore won't resubscribe each render).
+const subscribeFns: Record<FollowScope, (cb: () => void) => () => void> = {
+  equity: (cb) => subscribeScope('equity', cb),
+  crypto: (cb) => subscribeScope('crypto', cb),
+};
+const snapshotFns: Record<FollowScope, () => FollowsState> = {
+  equity: () => clients.equity.state,
+  crypto: () => clients.crypto.state,
+};
+const serverFns: Record<FollowScope, () => FollowsState> = {
+  equity: () => EMPTY,
+  crypto: () => EMPTY_CRYPTO,
+};
+function subscribeScope(scope: FollowScope, cb: () => void): () => void {
+  const c = clients[scope];
+  c.subscribers.add(cb);
+  void ensureLoaded(scope);
+  return () => c.subscribers.delete(cb);
 }
 
-export function useFollows() {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+export function useFollows(scope: FollowScope = 'equity') {
+  const snapshot = useSyncExternalStore(subscribeFns[scope], snapshotFns[scope], serverFns[scope]);
   const isFollowing = useCallback(
     (symbol: string) => snapshot.symbols.includes(normalizeSymbol(symbol)),
     [snapshot.symbols],
   );
-  return { ...snapshot, isFollowing, toggle: toggleFollow };
+  const toggle = useCallback((symbol: string) => toggleFollow(symbol, scope), [scope]);
+  return { ...snapshot, isFollowing, toggle };
 }
