@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse } from '../lib/api-types';
 import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
-import { TF_VIEWS, fetchBoardResilient, mergeTop } from '../lib/board-client';
+import { TF_VIEWS, fetchBoardResilient, mergeTop, type BoardScope } from '../lib/board-client';
 import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view';
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
@@ -70,17 +70,37 @@ function isSort(v: string | null): v is SortKey {
 }
 
 /** Build a shareable/reload-stable board URL; defaults are omitted for clean URLs. */
-function boardUrl(view: View, direction: DirectionFilter, minRR: number, sort: SortKey): string {
+function boardUrl(
+  scope: BoardScope,
+  view: View,
+  direction: DirectionFilter,
+  minRR: number,
+  sort: SortKey,
+): string {
+  const base = scope === 'crypto' ? '/crypto' : '/leaderboard';
   const p = new URLSearchParams();
   if (view !== 'top') p.set('tab', view);
   if (direction !== 'all') p.set('dir', direction);
   if (minRR > 0) p.set('minrr', String(minRR));
   if (sort !== 'score') p.set('sort', sort);
   const qs = p.toString();
-  return qs ? `/leaderboard?${qs}` : '/leaderboard';
+  return qs ? `${base}?${qs}` : base;
 }
 
-function ScanView() {
+const HERO: Record<BoardScope, { kicker: string; title: string; sub: string }> = {
+  equity: {
+    kicker: 'leaderboard',
+    title: 'Top setups',
+    sub: 'The best defined-risk setups the engine sees right now, ranked by Setup Score. Filter by candle size, or narrow to the symbols you follow.',
+  },
+  crypto: {
+    kicker: 'crypto',
+    title: 'Top coins',
+    sub: 'The best defined-risk crypto setups the engine sees right now, ranked by Setup Score — curated coins plus the ones you follow.',
+  },
+};
+
+function ScanView({ scope }: { scope: BoardScope }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // View + filters are all URL params (?tab=&dir=&minrr=&sort=) so a board view
@@ -133,8 +153,8 @@ function ScanView() {
   // Reflect view + filters in the URL (shareable, reload-stable).
   useEffect(() => {
     if (!ready) return;
-    router.replace(boardUrl(view, direction, minRR, sort), { scroll: false });
-  }, [ready, view, direction, minRR, sort, router]);
+    router.replace(boardUrl(scope, view, direction, minRR, sort), { scroll: false });
+  }, [ready, scope, view, direction, minRR, sort, router]);
 
   const loadBoard = useCallback(async (v: View, force = false) => {
     setLoading(true);
@@ -145,7 +165,7 @@ function ScanView() {
     if (!force) setBoard(null);
     try {
       const views: readonly Timeframe[] = isAggregate(v) ? TF_VIEWS : [v as Timeframe];
-      const results = await Promise.all(views.map((tf) => fetchBoardResilient(tf, force)));
+      const results = await Promise.all(views.map((tf) => fetchBoardResilient(tf, force, scope)));
       const boards = results.map((r) => r.board).filter((b): b is ScanResponse => b !== null);
 
       if (boards.length === 0) {
@@ -170,15 +190,16 @@ function ScanView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     if (!ready) return;
     void loadBoard(view);
   }, [ready, view, loadBoard]);
 
-  // The "Following" view narrows the aggregated board to the user's follows.
-  const { symbols: followed } = useFollows();
+  // The "Following" view narrows the aggregated board to the user's follows
+  // (of this scope — equity or crypto).
+  const { symbols: followed } = useFollows(scope);
 
   // Filtered/sorted rows for display (scan-level counts stay as-is).
   const displayed = useMemo<ScanResponse | null>(() => {
@@ -189,18 +210,19 @@ function ScanView() {
     return { ...board, rows: applyView(rows, { direction, minRR, minConfidence: 0, sort }) };
   }, [board, direction, minRR, sort, view, followed]);
 
-  // "market closed" hint applies to Hourly setups (the aggregate views mix them in).
+  // "market closed" hint applies to Hourly equity setups only — crypto trades 24/7.
   const showClosedHint =
-    (view === 'intraday' || isAggregate(view)) && !isUsMarketOpen(new Date());
+    scope !== 'crypto' &&
+    (view === 'intraday' || isAggregate(view)) &&
+    !isUsMarketOpen(new Date());
 
   return (
     <>
       <OnboardingGate />
       <SiteHeader />
       <div className={styles.shell}>
-        <PageHero kicker="leaderboard" title="Top setups">
-          The best defined-risk setups the engine sees right now, ranked by Setup Score. Filter by
-          candle size, or narrow to the symbols you follow.
+        <PageHero kicker={HERO[scope].kicker} title={HERO[scope].title}>
+          {HERO[scope].sub}
         </PageHero>
 
         <div className={styles.scanTabs} role="group" aria-label="board view">
@@ -338,10 +360,10 @@ function ScanView() {
 }
 
 // useSearchParams (the ?tab= persistence) needs a Suspense boundary above it.
-export default function ScanApp() {
+export default function ScanApp({ scope = 'equity' }: { scope?: BoardScope } = {}) {
   return (
     <Suspense>
-      <ScanView />
+      <ScanView scope={scope} />
     </Suspense>
   );
 }

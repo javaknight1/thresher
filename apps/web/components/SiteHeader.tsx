@@ -12,7 +12,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import AuthNav from './AuthNav';
 import Brandmark from './Brandmark';
 import CommandPalette from './CommandPalette';
-import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage } from './icons';
+import { IconDashboard, IconLeaderboard, IconSearch, IconBrokerage, IconCrypto } from './icons';
 import styles from './SiteHeader.module.css';
 
 function openPalette() {
@@ -29,6 +29,7 @@ export interface SiteHeaderProps {
 const LINKS = [
   { href: '/dashboard', label: 'Dashboard', Icon: IconDashboard, testid: 'nav-dashboard' },
   { href: '/leaderboard', label: 'Leaderboard', Icon: IconLeaderboard, testid: 'nav-leaderboard' },
+  { href: '/crypto', label: 'Crypto', Icon: IconCrypto, testid: 'nav-crypto' },
   { href: '/analyze', label: 'Search', Icon: IconSearch, testid: 'nav-search' },
   { href: '/brokerage', label: 'Brokerage', Icon: IconBrokerage, testid: 'nav-brokerage' },
 ] as const;

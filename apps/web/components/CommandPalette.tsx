@@ -26,6 +26,7 @@ interface Item {
 const NAV: Item[] = [
   { id: 'nav-dashboard', label: 'Dashboard', href: '/dashboard', group: 'Go to' },
   { id: 'nav-leaderboard', label: 'Leaderboard', href: '/leaderboard', group: 'Go to' },
+  { id: 'nav-crypto', label: 'Crypto', href: '/crypto', group: 'Go to' },
   { id: 'nav-search', label: 'Search a ticker', href: '/analyze', group: 'Go to' },
   { id: 'nav-brokerage', label: 'Brokerages', href: '/brokerage', group: 'Go to' },
   { id: 'nav-guide', label: 'Guide', href: '/guide', group: 'Go to' },

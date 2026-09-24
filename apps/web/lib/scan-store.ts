@@ -26,8 +26,10 @@ export interface ScanStore {
   set(timeframe: Timeframe, value: ScanResponse, ttlSeconds: number): Promise<void>;
 }
 
-function key(timeframe: Timeframe): string {
-  return `thresher:scan:${timeframe}`;
+export type BoardScope = 'equity' | 'crypto';
+
+function key(timeframe: Timeframe, scope: BoardScope): string {
+  return scope === 'crypto' ? `thresher:scan:crypto:${timeframe}` : `thresher:scan:${timeframe}`;
 }
 
 /** In-memory board store — per isolate; fine for local/personal use. */
@@ -53,29 +55,34 @@ export class MemoryScanStore implements ScanStore {
 /** Upstash Redis board store (REST client — edge/workerd-compatible). */
 export class UpstashScanStore implements ScanStore {
   private readonly redis: Redis;
+  private readonly scope: BoardScope;
 
-  constructor(redis?: Redis) {
+  constructor(redis?: Redis, scope: BoardScope = 'equity') {
     this.redis = redis ?? Redis.fromEnv();
+    this.scope = scope;
   }
 
   async get(timeframe: Timeframe): Promise<StoredBoard | null> {
-    const raw = await this.redis.get<StoredBoard | string>(key(timeframe));
+    const raw = await this.redis.get<StoredBoard | string>(key(timeframe, this.scope));
     if (raw === null || raw === undefined) return null;
     return typeof raw === 'string' ? (JSON.parse(raw) as StoredBoard) : raw;
   }
 
   async set(timeframe: Timeframe, value: ScanResponse, ttlSeconds: number): Promise<void> {
     const payload: StoredBoard = { value, storedAt: Date.now() };
-    await this.redis.set(key(timeframe), JSON.stringify(payload), {
+    await this.redis.set(key(timeframe, this.scope), JSON.stringify(payload), {
       ex: ttlSeconds * PHYSICAL_TTL_FACTOR,
     });
   }
 }
 
-/** Upstash when both env vars are configured, in-memory otherwise. */
-export function createScanStore(): ScanStore {
+/**
+ * Upstash when configured, in-memory otherwise. `scope` keys equity vs crypto
+ * boards separately (equity keys unchanged: `thresher:scan:{tf}`).
+ */
+export function createScanStore(scope: BoardScope = 'equity'): ScanStore {
   if (upstashConfigured()) {
-    return new UpstashScanStore();
+    return new UpstashScanStore(undefined, scope);
   }
-  return globalSingleton('thresher:scan-store', () => new MemoryScanStore());
+  return globalSingleton(`thresher:scan-store:${scope}`, () => new MemoryScanStore());
 }

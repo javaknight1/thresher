@@ -11,14 +11,22 @@ import { WEB_CONFIG } from './config';
 
 export const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
+/** Which board: the equity Leaderboard or the crypto board. */
+export type BoardScope = 'equity' | 'crypto';
+
 export type BoardFetch = { board: ScanResponse | null; status: number };
 
 /** Fetch one timeframe's board. `force` bypasses the cached board (re-scan). */
-export async function fetchBoard(tf: Timeframe, force = false): Promise<BoardFetch> {
+export async function fetchBoard(
+  tf: Timeframe,
+  force = false,
+  scope: BoardScope = 'equity',
+): Promise<BoardFetch> {
+  const params = new URLSearchParams({ timeframe: tf });
+  if (force) params.set('refresh', '1');
+  if (scope === 'crypto') params.set('scope', 'crypto');
   try {
-    const res = await fetch(`/api/v1/scan?timeframe=${tf}${force ? '&refresh=1' : ''}`, {
-      cache: 'no-store',
-    });
+    const res = await fetch(`/api/v1/scan?${params.toString()}`, { cache: 'no-store' });
     if (!res.ok) return { board: null, status: res.status };
     return { board: (await res.json()) as ScanResponse, status: 200 };
   } catch {
@@ -58,13 +66,17 @@ export type ResilientBoard = {
  * dropped timeframe changes the merge on every refresh (the "different results
  * each reload" bug). Reports whether it fell back / was rate-limited.
  */
-export async function fetchBoardResilient(tf: Timeframe, force: boolean): Promise<ResilientBoard> {
-  const fresh = await fetchBoard(tf, force);
+export async function fetchBoardResilient(
+  tf: Timeframe,
+  force: boolean,
+  scope: BoardScope = 'equity',
+): Promise<ResilientBoard> {
+  const fresh = await fetchBoard(tf, force, scope);
   const rateLimited = fresh.status === 429;
   if (fresh.board || !force) {
     return { board: fresh.board, fellBack: false, rateLimited };
   }
-  const cached = await fetchBoard(tf, false);
+  const cached = await fetchBoard(tf, false, scope);
   return { board: cached.board, fellBack: cached.board !== null, rateLimited };
 }
 

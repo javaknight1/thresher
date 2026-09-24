@@ -22,18 +22,24 @@ import { requestIdentity } from '../../../../lib/auth-server';
 import { getProvider } from '../../../../lib/providers/select';
 import { runScan } from '../../../../lib/scan-service';
 import { WEB_CONFIG } from '../../../../lib/config';
+import { isValidSymbol } from '../../../../lib/symbols';
 
 // Node runtime: same reason as the analyze route (yahoo-finance2 needs Node).
 export const runtime = 'nodejs';
 
 const barCache = createBarCache();
 const rateLimiter = createRateLimiter();
-// Shared board store (Upstash when configured) so every isolate sees the same
-// computed board and it survives deploys — otherwise each isolate recomputes.
-const boardStore = createScanStore();
-// Followed symbols (union across users) drive the scan universe — a followed
-// stock is always scanned, so its data gets cached (design: demand-driven).
-const followStore = createFollowStore();
+// Shared board stores (Upstash when configured), keyed per scope so equity and
+// crypto boards never overwrite each other; survives deploys across isolates.
+const boardStores = {
+  equity: createScanStore('equity'),
+  crypto: createScanStore('crypto'),
+};
+// Followed symbols (union across users) drive each scope's scan universe.
+const followStores = {
+  equity: createFollowStore('follows'),
+  crypto: createFollowStore('cryptofollows'),
+};
 
 const TIMEFRAMES: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 const MS_PER_SECOND = 1_000;
@@ -61,6 +67,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
   }
   const timeframe: Timeframe = rawTimeframe;
+  const scope = params.get('scope') === 'crypto' ? 'crypto' : 'equity';
+  const boardStore = boardStores[scope];
 
   // 1. Serve the stored board for normal reads (any age) — freshness is the
   // cron's job, not the reader's. Only an explicit refresh (or a cold cache)
@@ -76,7 +84,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // 2. Recompute path is rate-limited (protects the data source, design §2.1).
   // Signed-in users are limited by userId at the authed tier; anon by IP.
   const { identity, authed } = await requestIdentity(req);
-  const limit = await rateLimiter.check(`scan:${identity}`, authed);
+  const bucket = scope === 'crypto' ? `scan:crypto:${identity}` : `scan:${identity}`;
+  const limit = await rateLimiter.check(bucket, authed);
   if (!limit.allowed) {
     // Stale board beats a hard failure: serve the last one if we have it.
     if (cached) {
@@ -98,8 +107,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let board;
   try {
-    const followed = await followStore.allSymbols().catch(() => []);
-    board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
+    const followed = await followStores[scope].allSymbols().catch(() => []);
+    if (scope === 'crypto') {
+      // Crypto: scan the curated coins ∪ the user's crypto follows (follows
+      // first), capped for the subrequest budget. `universe` bypasses the
+      // equity buildUniverse, so pre-normalize/validate/cap here.
+      const universe = [
+        ...new Set([...followed, ...WEB_CONFIG.crypto.curatedCoins].map((s) => s.toUpperCase())),
+      ]
+        .filter(isValidSymbol)
+        .slice(0, WEB_CONFIG.crypto.maxScanUniverse);
+      board = await runScan({ timeframe, provider: getProvider(), cache: barCache, universe });
+    } else {
+      board = await runScan({ timeframe, provider: getProvider(), cache: barCache, followed });
+    }
   } catch (err) {
     // Recompute failed — serve the last-good (cached) board rather than dropping
     // this timeframe out of the aggregated Top view.

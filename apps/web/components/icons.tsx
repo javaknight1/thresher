@@ -62,6 +62,20 @@ export function IconBrokerage(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconCrypto(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 8.5h4a1.75 1.75 0 0 1 0 3.5h-4z" />
+      <path d="M9.5 12h4.5a1.75 1.75 0 0 1 0 3.5H9.5z" />
+      <path d="M11 7v1.5" />
+      <path d="M11 15.5V17" />
+      <path d="M13 7v1.5" />
+      <path d="M13 15.5V17" />
+    </svg>
+  );
+}
+
 export function IconSettings(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>
