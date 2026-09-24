@@ -11,8 +11,20 @@ import { WEB_CONFIG } from './config';
 
 export const TF_VIEWS: readonly Timeframe[] = ['intraday', 'swing', 'position'];
 
-/** Which board: the equity Leaderboard or the crypto board. */
+/** Wire-level board scope — one precomputed board per scope in the store. */
 export type BoardScope = 'equity' | 'crypto';
+
+/**
+ * UI-level board mode. The Leaderboard is `'all'` (stocks + crypto merged
+ * client-side from the two per-scope boards); the Stocks and Crypto tabs pin a
+ * single scope. `'all'` never hits the wire directly — it fans out to both scopes.
+ */
+export type BoardMode = 'all' | BoardScope;
+
+/** The wire scopes a UI mode reads from. */
+export function scopesForMode(mode: BoardMode): readonly BoardScope[] {
+  return mode === 'all' ? (['equity', 'crypto'] as const) : [mode];
+}
 
 export type BoardFetch = { board: ScanResponse | null; status: number };
 
@@ -78,6 +90,37 @@ export async function fetchBoardResilient(
   }
   const cached = await fetchBoard(tf, false, scope);
   return { board: cached.board, fellBack: cached.board !== null, rateLimited };
+}
+
+/**
+ * One timeframe's board for a UI mode. For a single scope this is just
+ * `fetchBoardResilient`; for `'all'` it fetches both scopes' boards and merges
+ * their rows into one board for the timeframe (counts summed). Equity and crypto
+ * symbols never collide, so no dedup is needed. Returns the board plus whether
+ * any underlying fetch fell back / was rate-limited.
+ */
+export async function fetchModeBoard(
+  tf: Timeframe,
+  force: boolean,
+  mode: BoardMode,
+): Promise<ResilientBoard> {
+  const scopes = scopesForMode(mode);
+  const results = await Promise.all(scopes.map((s) => fetchBoardResilient(tf, force, s)));
+  const boards = results.map((r) => r.board).filter((b): b is ScanResponse => b !== null);
+  const fellBack = results.some((r) => r.fellBack);
+  const rateLimited = results.some((r) => r.rateLimited);
+  if (boards.length === 0) return { board: null, fellBack, rateLimited };
+  if (boards.length === 1) return { board: boards[0], fellBack, rateLimited };
+  const merged: ScanResponse = {
+    timeframe: tf,
+    asOf: boards.reduce((latest, b) => (b.asOf > latest ? b.asOf : latest), boards[0].asOf),
+    universeSize: boards.reduce((s, b) => s + b.universeSize, 0),
+    emitted: boards.reduce((s, b) => s + b.emitted, 0),
+    refused: boards.reduce((s, b) => s + b.refused, 0),
+    skipped: boards.reduce((s, b) => s + b.skipped, 0),
+    rows: boards.flatMap((b) => b.rows),
+  };
+  return { board: merged, fellBack, rateLimited };
 }
 
 /**

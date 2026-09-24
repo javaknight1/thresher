@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { Timeframe } from '@thresher/engine';
 import type { ScanResponse } from '../lib/api-types';
 import { ERROR_TITLES, type ErrorState } from '../lib/error-messages';
-import { TF_VIEWS, fetchBoardResilient, mergeTop, type BoardScope } from '../lib/board-client';
+import { TF_VIEWS, fetchModeBoard, mergeTop, type BoardMode } from '../lib/board-client';
 import { applyView, type DirectionFilter, type SortKey } from '../lib/scan-view';
 import { isUsMarketOpen } from '../lib/market-hours';
 import ScanBoard from './ScanBoard';
@@ -72,13 +72,13 @@ function isSort(v: string | null): v is SortKey {
 
 /** Build a shareable/reload-stable board URL; defaults are omitted for clean URLs. */
 function boardUrl(
-  scope: BoardScope,
+  scope: BoardMode,
   view: View,
   direction: DirectionFilter,
   minRR: number,
   sort: SortKey,
 ): string {
-  const base = scope === 'crypto' ? '/crypto' : '/leaderboard';
+  const base = scope === 'crypto' ? '/crypto' : scope === 'equity' ? '/stocks' : '/leaderboard';
   const p = new URLSearchParams();
   if (view !== 'top') p.set('tab', view);
   if (direction !== 'all') p.set('dir', direction);
@@ -88,11 +88,16 @@ function boardUrl(
   return qs ? `${base}?${qs}` : base;
 }
 
-const HERO: Record<BoardScope, { kicker: string; title: string; sub: string }> = {
-  equity: {
+const HERO: Record<BoardMode, { kicker: string; title: string; sub: string }> = {
+  all: {
     kicker: 'leaderboard',
     title: 'Top setups',
-    sub: 'The best defined-risk setups the engine sees right now, ranked by Setup Score. Filter by candle size, or narrow to the symbols you follow.',
+    sub: 'The best defined-risk setups across stocks and crypto, ranked together by Setup Score. Filter by candle size, or narrow to the symbols you follow.',
+  },
+  equity: {
+    kicker: 'stocks',
+    title: 'Top stocks',
+    sub: 'The best defined-risk stock setups the engine sees right now, ranked by Setup Score. Filter by candle size, or narrow to the symbols you follow.',
   },
   crypto: {
     kicker: 'crypto',
@@ -101,7 +106,7 @@ const HERO: Record<BoardScope, { kicker: string; title: string; sub: string }> =
   },
 };
 
-function ScanView({ scope }: { scope: BoardScope }) {
+function ScanView({ scope }: { scope: BoardMode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // View + filters are all URL params (?tab=&dir=&minrr=&sort=) so a board view
@@ -166,7 +171,7 @@ function ScanView({ scope }: { scope: BoardScope }) {
     if (!force) setBoard(null);
     try {
       const views: readonly Timeframe[] = isAggregate(v) ? TF_VIEWS : [v as Timeframe];
-      const results = await Promise.all(views.map((tf) => fetchBoardResilient(tf, force, scope)));
+      const results = await Promise.all(views.map((tf) => fetchModeBoard(tf, force, scope)));
       const boards = results.map((r) => r.board).filter((b): b is ScanResponse => b !== null);
 
       if (boards.length === 0) {
@@ -198,9 +203,19 @@ function ScanView({ scope }: { scope: BoardScope }) {
     void loadBoard(view);
   }, [ready, view, loadBoard]);
 
-  // The "Following" view narrows the aggregated board to the user's follows
-  // (of this scope — equity or crypto).
-  const { symbols: followed } = useFollows(scope);
+  // The "Following" view narrows the aggregated board to the user's follows.
+  // The Leaderboard ('all') unions both namespaces; a pinned scope uses its own.
+  const { symbols: equityFollows } = useFollows('equity');
+  const { symbols: cryptoFollows } = useFollows('crypto');
+  const followed = useMemo(
+    () =>
+      scope === 'crypto'
+        ? cryptoFollows
+        : scope === 'equity'
+          ? equityFollows
+          : [...equityFollows, ...cryptoFollows],
+    [scope, equityFollows, cryptoFollows],
+  );
 
   // Filtered/sorted rows for display (scan-level counts stay as-is).
   const displayed = useMemo<ScanResponse | null>(() => {
@@ -372,7 +387,7 @@ function ScanView({ scope }: { scope: BoardScope }) {
 }
 
 // useSearchParams (the ?tab= persistence) needs a Suspense boundary above it.
-export default function ScanApp({ scope = 'equity' }: { scope?: BoardScope } = {}) {
+export default function ScanApp({ scope = 'all' }: { scope?: BoardMode } = {}) {
   return (
     <Suspense>
       <ScanView scope={scope} />
