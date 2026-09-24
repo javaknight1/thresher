@@ -177,7 +177,7 @@ discipline (≥ 90 % coverage on new code; MockProvider only — never call Yaho
   exists — the crypto analog of G5.
 - Fractional-unit display precision per coin (BTC vs a sub-dollar alt).
 
-## 9. Post-ship findings (v0.15.1)
+## 9. Post-ship findings (v0.16.0)
 
 - **Yahoo numeric-suffix symbols (ticker collisions).** Several major coins whose base
   ticker collides with an equity/other coin get a numeric suffix on Yahoo, NOT the plain
@@ -191,7 +191,7 @@ discipline (≥ 90 % coverage on new code; MockProvider only — never call Yaho
   - **Follow-up to support them:** broaden `SYMBOL_PATTERN` to allow digits + a longer
     max, AND add a **display-name map** (`UNI7083-USD` → "Uniswap (UNI)") so the board /
     search don't show the raw suffixed symbol. Then add them to `curatedCoins`.
-- **Curated universe (v0.15.1):** ~56 majors whose plain `BASE-USD` symbol was
+- **Curated universe (v0.16.0):** ~56 majors whose plain `BASE-USD` symbol was
   **verified to return daily bars** on live Yahoo (`config.ts crypto.curatedCoins`). The
   board scans the first `maxScanUniverse` (24 — crypto makes no earnings subrequests, so
   it has budget above the equity cap of 20). Delisted/absent coins are simply skipped.
