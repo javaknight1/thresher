@@ -25,6 +25,12 @@ test('the /crypto board has a coin search that opens the Analyze view', async ({
   await input.fill('BTC');
   const result = page.getByTestId('search-result-BTC-USD');
   await expect(result).toBeVisible({ timeout: 10_000 });
+  // The coin logo resolves to CoinCap's keyless icon set (falls back to a
+  // monogram only if that 404s), so the row renders a real coin logo.
+  await expect(result.locator('img')).toHaveAttribute(
+    'src',
+    /assets\.coincap\.io\/assets\/icons\/btc/,
+  );
   await result.click();
 
   await expect(page).toHaveURL(/\/analyze\?symbol=BTC-USD/);

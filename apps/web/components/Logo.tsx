@@ -1,20 +1,24 @@
 'use client';
 
 /**
- * Company / brokerage logo. Uses logo.dev (ticker or domain endpoint) when a
- * publishable token is configured (NEXT_PUBLIC_LOGO_DEV_TOKEN), and falls back
- * to the deterministic Monogram when there's no token or the logo is missing /
- * fails to load — so it's never broken. Logos sit on a white rounded tile so
- * they stay visible on the dark theme.
+ * Company / brokerage / coin logo. Equities & brokerages use logo.dev (ticker or
+ * domain endpoint) when a publishable token is configured
+ * (NEXT_PUBLIC_LOGO_DEV_TOKEN). Crypto uses CoinCap's keyless icon set, keyed by
+ * the base symbol (BTC-USD → btc) — so coin logos work even without the logo.dev
+ * token. Anything missing / failing to load falls back to the deterministic
+ * Monogram, so it's never broken. Logos sit on a white rounded tile so they stay
+ * visible on the dark theme.
  */
 import { useState } from 'react';
 import Monogram from './Monogram';
+import { assetClassOf } from '../lib/asset-class';
+import { cryptoIconUrl } from '../lib/crypto-icon';
 import styles from './Logo.module.css';
 
 const TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
 
 export interface LogoProps {
-  /** stock ticker (uses logo.dev /ticker/) */
+  /** stock ticker (logo.dev /ticker/) or coin symbol like BTC-USD (CoinCap) */
   ticker?: string;
   /** company/brokerage domain, e.g. robinhood.com (uses logo.dev /{domain}) */
   domain?: string;
@@ -24,6 +28,11 @@ export interface LogoProps {
 }
 
 function srcFor(ticker: string | undefined, domain: string | undefined, size: number): string | null {
+  // Crypto: CoinCap's icon set is keyed by the lowercase base symbol and needs no
+  // token, so coin logos render regardless of the logo.dev config.
+  if (ticker && assetClassOf(ticker) === 'crypto') {
+    return cryptoIconUrl(ticker);
+  }
   if (!TOKEN) return null;
   const q = `token=${TOKEN}&format=png&size=${size * 2}&retina=true`;
   if (ticker) return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?${q}`;
