@@ -345,7 +345,7 @@ export default function AnalyzeApp() {
         </div>
       )}
 
-      <Footer />
+      <Footer assetClass={isCrypto ? 'crypto' : 'equity'} />
       </div>
     </>
   );

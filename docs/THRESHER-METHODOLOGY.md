@@ -2,9 +2,9 @@
 
 **Every number the engine produces, derived from first principles.**
 
-This document serves two purposes: it is the implementation spec for `packages/engine` (Parts I–II) and the future `packages/options-engine` (Part III), and it is the source content for the public `/methodology` documentation pages. If a calculation isn't in this document, the engine doesn't do it.
+This document defines every calculation the engine performs — the math and mechanics behind each number, from first principles. It is also the source content for the public `/methodology` pages. If a calculation isn't in this document, the engine doesn't do it.
 
-Companion to `THRESHER-DESIGN.md`. Version 1.2 (adds **Part IV — Crypto**, proposed/awaiting sign-off; Part III — Options remains proposed, deferred behind crypto).
+Version 1.2 (adds **Part IV — Crypto**, shipped; Part III — Options remains proposed, deferred behind crypto).
 
 **Docs site structure** (each Part I–IV section below = one page):
 
@@ -16,7 +16,8 @@ Companion to `THRESHER-DESIGN.md`. Version 1.2 (adds **Part IV — Crypto**, pro
                                   stops, targets, gates, sizing
 /methodology/options/{slug}     → delta, gamma, theta, vega, rho, pricing,
                                   strategies, exits, gates, limitations (Part III)
-/methodology/crypto/{slug}      → profile, sizing, volume, guardrails,
+/methodology/crypto/{slug}      → scope, asset-class, changes, profile,
+                                  earnings, sizing, volume, guardrails,
                                   example, limitations (Part IV)
 /methodology/example            → worked end-to-end trade derivation
 /methodology/limitations        → what this engine cannot see
@@ -99,7 +100,7 @@ EMA_t   = C_t × k + EMA_(t−1) × (1 − k)
 EMA_0   = C_0                              (seed)
 ```
 
-**Calculation:** seeded with the first close, then recursively blended. Because the seed biases early values, the engine requires at least 5×n bars of history before any EMA-derived signal is trusted, which the lookback windows in the design doc guarantee.
+**Calculation:** seeded with the first close, then recursively blended. Because the seed biases early values, the engine requires at least 5×n bars of history before any EMA-derived signal is trusted, which the timeframe lookback windows guarantee.
 
 **Parameters:** n = 12 and 26 — used exclusively as MACD inputs. The engine never reads EMAs directly.
 
@@ -335,7 +336,7 @@ Upper = Mid + 2σ        Lower = Mid − 2σ
 
 # Part II — Determination
 
-How indicator readings become a trade, step by step. (Component point tables for each family live in `THRESHER-DESIGN.md` §4.1; this part documents the *reasoning* and the downstream math.)
+How indicator readings become a trade, step by step. Each family's per-component point table is a set of versioned constants; this part documents the *reasoning* behind those votes and the downstream math.
 
 ---
 
@@ -360,7 +361,7 @@ Design rule: no single component may exceed 0.5 family points, so no single indi
 S = Σ over families ( weight_f × score_f )         S ∈ [−1, +1]
 ```
 
-Weights per timeframe (design doc §4.2): intraday tilts toward Momentum (0.35) and Volume (0.20) because over hours, flow *is* the signal; position tilts toward Trend (0.45) and Structure (0.25) because over months, regime *is* the signal. Weights always sum to 1.0, are stored in versioned config, and are the first parameters the calibration pipeline (design doc §7) will tune — the v1 values are reasoned priors, not measured optima, and the docs page says so.
+Weights per timeframe: intraday tilts toward Momentum (0.35) and Volume (0.20) because over hours, flow *is* the signal; position tilts toward Trend (0.45) and Structure (0.25) because over months, regime *is* the signal. Weights always sum to 1.0, are versioned constants, and are the first parameters a future calibration pass will tune — the v1 values are reasoned priors, not measured optima, and this page says so.
 
 ## II.3 Direction thresholds
 
@@ -425,7 +426,7 @@ Why prefer structure: a level with prior touches is a real liquidity magnet and 
 
 ## II.7 The refusal gates — full math
 
-All five must pass, evaluated in order; the response names the first failure and its reason string. G1–G3, G5 are simple predicates (design doc §5.5). **G4 is the confidence × return joint gate** and deserves its own derivation:
+All five must pass, evaluated in order; the response names the first failure and its reason string. G1–G3, G5 are simple predicates. **G4 is the confidence × return joint gate** and deserves its own derivation:
 
 Treat C/100 as a *provisional* win-rate proxy `p` (provisional = uncalibrated; the gate's conservatism margin exists precisely because of that). A trade risking 1R to make RR has expected value, in R-units:
 
@@ -476,7 +477,7 @@ MACD 0.92 vs signal 0.71, histogram 0.21 (vs 0.13 three bars ago)
 ADX 24 · OBV Δ20 > 0 with price Δ20 > 0 · RelVol 0.76 · %B 0.74
 ```
 
-**Families** (point tables from design doc §4.1):
+**Families** (from the per-component point tables):
 
 | Family | Components | Raw | Final |
 |---|---|---|---|
@@ -510,10 +511,10 @@ The honesty page. Published verbatim at `/methodology/limitations`:
 
 1. **TA sees price and volume only.** No fundamentals, no news, no filings, no macro. A perfect technical setup walks into a guidance cut blind. Gate G5 (earnings veto) is the only event-awareness in v1.
 2. **All indicators here are derivatives of the same price series** (except volume) — "independence" of families is partial by construction.
-3. **Confidence is uncalibrated until §7 of the design doc ships.** Treating it as a probability before then is exactly the mistake the UI labeling exists to prevent.
+3. **Confidence is uncalibrated until the calibration pass ships.** Treating it as a probability before then is exactly the mistake the "signal agreement" labeling exists to prevent.
 4. **Backward-looking volatility:** ATR-sized stops assume tomorrow's volatility resembles the last 14 bars. Regime breaks violate this.
 5. **No execution modeling in v1:** slippage, spreads, and commissions are not in the R:R math. Real results will be worse than displayed math by those costs; the History page will measure the gap.
-6. **Free-data caveats:** Yahoo volume and intraday bars carry quality issues (design doc §11.4); every response carries its data timestamp.
+6. **Free-data caveats:** free, delayed market data — volume and intraday bars in particular — carries quality issues; every response carries its data timestamp.
 7. **Nothing here is financial advice.** The engine reports the technical structure and the arithmetic of a defined-risk setup. The decision, and the risk, belong to the user.
 
 ---
@@ -1102,10 +1103,10 @@ limitation (which still applies to the underlying read):
 
 # Part IV — Crypto
 
-> **Status: PROPOSED — awaiting sign-off.** Part IV is the binding spec for crypto
-> support, authored **before** any engine change (project rule). Until signed off, no
-> crypto code is written; once signed off, if code and this Part disagree, **this Part
-> wins**. Crypto ships **before** options (Part III stays proposed/deferred).
+> **Status: SHIPPED.** Part IV is the binding spec for crypto support. If the engine and
+> this Part ever disagree, **this Part wins**. The tuned constants (IV.4) remain
+> **un-calibrated reasoned priors** — a future crypto calibration pass tunes them. Crypto
+> shipped **before** options (Part III stays proposed/deferred).
 
 Crypto is **not a different kind of technical analysis.** Every indicator (Part I), the
 four families, the composite, direction, confidence, and the stop/target/R:R math (Part
@@ -1117,8 +1118,8 @@ framing. Everything not listed here is identical to Parts I–II.
 
 ## IV.1 Scope and the reused core
 
-- **In scope:** spot cryptocurrencies quoted in USD via the free Yahoo feed (`BTC-USD`,
-  `ETH-USD`, …). Same three timeframes as equities — **Hourly** (1h), **Daily** (1d),
+- **In scope:** spot cryptocurrencies quoted in USD (`BTC-USD`, `ETH-USD`, …) from the
+  free market-data feed. Same three timeframes as equities — **Hourly** (1h), **Daily** (1d),
   **Weekly** (1w) — same lookbacks, same candle intervals.
 - **Reused verbatim from Parts I–II:** all indicators; the four families and their
   component point tables; the composite `S`; the direction threshold; the confidence
@@ -1129,28 +1130,26 @@ framing. Everything not listed here is identical to Parts I–II.
 
 ## IV.2 Asset-class definition
 
-A symbol is **crypto** iff it is in the curated crypto registry **or** matches the Yahoo
-crypto quote form `BASE-USD` (uppercase base of 2–5 letters, `-USD`/`-USDT` suffix). The
-classification is a **web-layer** decision (`assetClassOf(symbol)`); the pure engine never
-maps symbols to a class — the web layer simply passes the matching config
-(`DEFAULT_CONFIG` for equities, `CRYPTO_CONFIG` for crypto) into `analyze(bars, config,
-ctx)`. Each config carries its **own version + config hash**, stamped into every result,
-so equity and crypto provenance never collide.
+A symbol is **crypto** iff it is in the curated crypto registry **or** matches the standard
+`BASE-USD` crypto quote form (uppercase base of 2–5 letters, `-USD`/`-USDT` suffix). That
+classification selects which set of constants the *same* engine runs with — the equity
+profile or the crypto profile (IV.4). Each profile carries its **own version + hash**,
+stamped into every result, so equity and crypto provenance never collide.
 
 ## IV.3 What changes vs. equities — at a glance
 
 | Concern | Equity (Parts I–II) | Crypto (Part IV) |
 |---|---|---|
-| Engine code | `packages/engine` | **same engine**, different config |
-| Config | `DEFAULT_CONFIG` | **`CRYPTO_CONFIG`** (IV.4) |
+| Scoring engine | shared | **same engine**, different constants |
+| Constant profile | equity profile | **crypto profile** (IV.4) |
 | Earnings gate G5 | active (veto window) | **off** — no earnings (IV.5) |
-| Sizing unit | whole **shares** (`floor`) | **fractional units** (IV.6) |
-| Volume day-normalization | `perDayFactor` 6.5 (session) | **24** (24/7) (IV.7) |
+| Sizing unit | whole **shares** (floor) | **fractional units** (IV.6) |
+| Volume day-normalization | 6.5 (session hours) | **24** (24/7) (IV.7) |
 | Price floor guardrail | `$2` | **none** (IV.8) |
 | Market-hours "closed" hint | shown | **suppressed** (24/7) |
-| Fundamentals panel | shown | **hidden** (N/A for coins) |
+| Fundamentals | shown | **none** (N/A for coins) |
 
-## IV.4 The tuned crypto profile — `CRYPTO_CONFIG`
+## IV.4 The tuned crypto profile
 
 These are the versioned crypto constants (the sign-off centerpiece). They are **reasoned
 priors, not measured optima** — exactly the status the equity set carries (II.2) — and a
@@ -1195,15 +1194,15 @@ the **`earnings` penalty is inert** (no earnings). Buckets `highMin 70`, `modera
 **Gates:** `minConfidence 35`, `minRR 1.2`, `evMargin 0.25` — **unchanged** (risk
 discipline is asset-agnostic).
 
-`CRYPTO_CONFIG` also sets `earningsVetoTradingDays: { intraday: null, swing: null,
-position: null }` (IV.5) and the sizing fields in IV.6.
+The crypto profile also sets the earnings-veto window to **none** for every timeframe
+(IV.5) and the fractional sizing fields in IV.6.
 
 ## IV.5 The earnings gate (G5) is off for crypto
 
-Crypto has no earnings, so G5 is disabled by config: `earningsVetoTradingDays` is `null`
-for every timeframe (which II.7 already treats as *flag-only, never veto*), and the web
-layer passes `tradingDaysToEarnings: null`. The engine's existing null-safe path (G5 pass,
-"earnings date unknown") applies unchanged — no special-casing in the engine.
+Crypto has no earnings, so G5 is turned off: the earnings-veto window is **none** for every
+timeframe (which II.7 already treats as *flag-only, never veto*), and no earnings date is
+supplied. The engine's existing null-safe path (G5 pass, "earnings date unknown") applies
+unchanged — no special-casing in the engine's math.
 
 A future **event veto** for crypto-specific catalysts (token unlocks, exchange listings,
 protocol upgrades, halvings) is **deferred** — the free feed has no such calendar. When a
@@ -1246,7 +1245,7 @@ The label is **"units"** (or the coin), not "shares." Equities keep `unitStep = 
 
 ## IV.9 Worked example — end to end
 
-Hypothetical coin **COINX-USD**, **Daily** timeframe, `CRYPTO_CONFIG`. Family scores
+Hypothetical coin **COINX-USD**, **Daily** timeframe, crypto profile. Family scores
 (same component votes as the II.9 equity example, for comparison): Trend **+0.80**,
 Momentum **+0.90**, Volume **+0.50** (RelVol thin → `thin` flag), Structure **+0.60**.
 
@@ -1283,10 +1282,9 @@ where whole-unit flooring would have shown 0.*
 −5 thin = **29 → G2 fails (C < 35): NO TRADE** — "conviction floor — choppy tape and
 momentum dissent." The refusal behavior is identical to equities.
 
-> The worked-example outputs are the illustrative result of the Part I–II math under
-> `CRYPTO_CONFIG`; the Phase-1 fixture reproduces them exactly and is regenerated from the
-> verified engine output. The binding items are the **constants, gate behavior, and sizing
-> rule** — not the rounded digits.
+> The worked-example outputs are the illustrative result of the Part I–II math under the
+> crypto profile. The binding items are the **constants, gate behavior, and sizing rule** —
+> not the rounded digits.
 
 ## IV.10 Limitations — crypto
 
@@ -1301,10 +1299,10 @@ limitation (which still applies):
    venues; the Volume family is down-weighted and its readings are the softest input.
 4. **No fundamentals, no earnings.** There is no P/E, dividend, or earnings calendar; the
    only event-awareness equities have (G5) does not exist for crypto yet.
-5. **Free, delayed data on a limited coin set.** Yahoo's crypto coverage is delayed and
-   narrower than a dedicated exchange feed; a paid crypto feed (real-time, full universe,
-   better volume) is a future upgrade behind the same provider seam.
-6. **Un-calibrated priors.** The `CRYPTO_CONFIG` constants are reasoned, not measured;
+5. **Free, delayed data on a limited coin set.** The free feed's crypto coverage is delayed
+   and narrower than a dedicated exchange feed; a paid crypto feed (real-time, full universe,
+   better volume) is a possible future upgrade.
+6. **Un-calibrated priors.** The crypto profile's constants are reasoned, not measured;
    until a crypto backtest runs, confidence is "signal agreement," never a win rate.
 7. **Nothing here is financial advice.** Crypto is higher-risk than equities. The engine
    reports technical structure and defined-risk arithmetic; the decision, and the risk,

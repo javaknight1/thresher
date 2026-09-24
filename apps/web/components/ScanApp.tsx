@@ -353,7 +353,7 @@ function ScanView({ scope }: { scope: BoardScope }) {
         <ScanBoard board={displayed} showTimeframe={isAggregate(view)} />
       )}
 
-        <Footer />
+        <Footer assetClass={scope === 'crypto' ? 'crypto' : 'equity'} />
       </div>
     </>
   );

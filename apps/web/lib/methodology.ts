@@ -12,7 +12,7 @@
  */
 import { METHODOLOGY_DOC } from './methodology-doc.generated';
 
-export type MethodologyPart = 'indicators' | 'engine';
+export type MethodologyPart = 'indicators' | 'engine' | 'crypto';
 
 export interface MethodologySection {
   /** URL slug, e.g. "rsi" or "gates" (or "example" / "limitations"). */
@@ -51,6 +51,18 @@ const SLUG_MAPS: Record<MethodologyPart, Record<string, string>> = {
     gates: 'II.7',
     sizing: 'II.8',
   },
+  crypto: {
+    scope: 'IV.1',
+    'asset-class': 'IV.2',
+    changes: 'IV.3',
+    profile: 'IV.4',
+    earnings: 'IV.5',
+    sizing: 'IV.6',
+    volume: 'IV.7',
+    guardrails: 'IV.8',
+    example: 'IV.9',
+    limitations: 'IV.10',
+  },
 };
 
 const EXAMPLE_NUMBER = 'II.9';
@@ -69,7 +81,7 @@ interface ParsedDoc {
 
 let parsed: ParsedDoc | null = null;
 
-const SECTION_HEADING = /^## (I{1,2})\.(\d+)\s+(.+)$/;
+const SECTION_HEADING = /^## ([IVX]+)\.(\d+)\s+(.+)$/;
 
 function parseDoc(): ParsedDoc {
   if (parsed) return parsed;

@@ -9,7 +9,14 @@ import Link from 'next/link';
 import Disclaimer from './Disclaimer';
 import styles from './Footer.module.css';
 
-export default function Footer({ minimal = false }: { minimal?: boolean }) {
+export default function Footer({
+  minimal = false,
+  assetClass = 'equity',
+}: {
+  minimal?: boolean;
+  /** Crypto pages get a 24/7 + unreliable-volume caveat in the disclaimer. */
+  assetClass?: 'equity' | 'crypto';
+}) {
   // Internal/tool pages: version only — no reference links or trade disclaimer.
   if (minimal) {
     return (
@@ -50,7 +57,7 @@ export default function Footer({ minimal = false }: { minimal?: boolean }) {
           </span>
         )}
       </nav>
-      <Disclaimer />
+      <Disclaimer assetClass={assetClass} />
     </footer>
   );
 }

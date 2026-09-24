@@ -10,6 +10,7 @@ export default function MethodologyOverviewPage() {
   const overview = getOverview();
   const indicators = listSections('indicators');
   const engine = listSections('engine');
+  const crypto = listSections('crypto');
 
   return (
     <article className={styles.article}>
@@ -40,6 +41,20 @@ export default function MethodologyOverviewPage() {
           <Link
             key={section.slug}
             href={`/methodology/engine/${section.slug}`}
+            className={styles.cardLink}
+          >
+            <span className={styles.cardNum}>{section.number}</span>
+            <span className={styles.cardTitle}>{section.shortTitle}</span>
+          </Link>
+        ))}
+      </div>
+
+      <p className={`kicker ${styles.gridLabel}`}>Part IV — Crypto</p>
+      <div className={styles.grid}>
+        {crypto.map((section) => (
+          <Link
+            key={section.slug}
+            href={`/methodology/crypto/${section.slug}`}
             className={styles.cardLink}
           >
             <span className={styles.cardNum}>{section.number}</span>

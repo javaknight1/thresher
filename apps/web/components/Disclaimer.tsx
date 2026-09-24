@@ -6,7 +6,8 @@
 import Link from 'next/link';
 import styles from './Disclaimer.module.css';
 
-export function Disclaimer() {
+export function Disclaimer({ assetClass = 'equity' }: { assetClass?: 'equity' | 'crypto' }) {
+  const isCrypto = assetClass === 'crypto';
   return (
     <div className={styles.root} data-testid="disclaimer">
       <p className={styles.text}>
@@ -17,7 +18,16 @@ export function Disclaimer() {
         Confidence measures signal agreement across the four families — it is not a calibrated win
         probability. Market data comes from a delayed, free-tier feed, and every response carries
         the timestamp of the data it was computed from.{' '}
-        <Link href="/methodology/limitations" className="deep-link">
+        {isCrypto && (
+          <>
+            Crypto trades 24/7 with no earnings or fundamentals, and reported volume is unreliable
+            across exchanges — so the volume signal is weighted lightly and stops run wider.{' '}
+          </>
+        )}
+        <Link
+          href={isCrypto ? '/methodology/crypto/limitations' : '/methodology/limitations'}
+          className="deep-link"
+        >
           What the engine cannot see
         </Link>
       </p>
