@@ -17,6 +17,7 @@ import { createFollowStore } from '../../../../lib/follow-store';
 import { getProvider } from '../../../../lib/providers/select';
 import { runScan } from '../../../../lib/scan-service';
 import { WEB_CONFIG } from '../../../../lib/config';
+import { classifyCronError } from '../../../../lib/cron-error';
 
 export const runtime = 'nodejs';
 
@@ -96,29 +97,31 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       { headers: { 'cache-control': 'no-store' } },
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
     const name = err instanceof Error ? err.name : 'Error';
+    const detail = err instanceof Error ? err.message : String(err);
+    // Classify by the error's CONTENT (not just the stage): the subrequest limit
+    // is invocation-wide and usually throws on the store write, so keying off the
+    // stage alone mislabels it as an Upstash problem. See lib/cron-error.
+    const { reason, message } = classifyCronError(err, stage, { scope, timeframe, universeSize });
     // Surfaces in the Cloudflare Worker logs (stack included there).
     console.error(
-      `[cron/scan] ${scope}/${timeframe} failed during "${stage}" after ${Date.now() - startedAt}ms: ${name}: ${message}`,
+      `[cron/scan] ${scope}/${timeframe} failed [${reason}] during "${stage}" after ${Date.now() - startedAt}ms: ${message}`,
       err instanceof Error ? err.stack : undefined,
     );
     // …and in the HTTP body so the scheduler's log shows the cause, not just 500.
+    // `message` is the human-readable one-liner the workflow surfaces; `reason` is
+    // the stable code; `error` keeps the raw for debugging.
     return NextResponse.json(
       {
         ok: false,
         scope,
         timeframe,
         stage,
-        error: `${name}: ${message}`,
+        reason,
+        message,
+        error: `${name}: ${detail}`,
         universeSize,
         ms: Date.now() - startedAt,
-        hint:
-          stage === 'scan'
-            ? 'The scan fan-out likely hit the Cloudflare free-tier subrequest/CPU limit — see COSTS.md (Workers Paid) or reduce scan.maxUniverse.'
-            : stage === 'store'
-              ? 'Writing the board to the store failed — check the Upstash runtime env vars on the Worker.'
-              : 'Reading the followed universe failed — check the Supabase / follow-store configuration.',
       },
       { status: 500, headers: { 'cache-control': 'no-store' } },
     );

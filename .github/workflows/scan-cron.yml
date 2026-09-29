@@ -51,7 +51,30 @@ jobs:
           done
           if [ "$code" = "200" ]; then
             echo "✓ $SCOPE/$TF -> HTTP 200 :: $(cat "$body")"
-          else
-            echo "::error title=cron $SCOPE/$TF failed (HTTP $code)::$(cat "$body")"
-            exit 1
+            exit 0
           fi
+          # Failure: surface a human-readable reason, not raw JSON. The route
+          # returns {reason, message, ...}; prefer message, then error, then raw.
+          raw=$(cat "$body")
+          reason=$(printf '%s' "$raw" | jq -r '.reason // empty' 2>/dev/null || true)
+          msg=$(printf '%s' "$raw" | jq -r '.message // .error // empty' 2>/dev/null || true)
+          if [ -z "$msg" ]; then
+            # Non-JSON body — the Worker crashed hard before returning structured
+            # JSON (e.g. Cloudflare "error code: 1101" = unhandled exception, or a
+            # CPU/subrequest hard-kill of the isolate).
+            case "$raw" in
+              *1101*)
+                reason="worker-crash"
+                msg="The Worker threw an unhandled exception (Cloudflare error 1101) before returning — most likely a CPU or subrequest hard-kill during the $SCOPE/$TF scan. Reduce the scanned universe or move to Workers Paid." ;;
+              *5[0-9][0-9]*|"")
+                reason="edge-error"
+                msg="No structured error body (HTTP $code). The request failed at the edge before the Worker could respond." ;;
+              *)
+                msg="$raw" ;;
+            esac
+          fi
+          title="cron $SCOPE/$TF failed (HTTP $code${reason:+, $reason})"
+          echo "::error title=$title::$msg"
+          # Also echo to the step log so it's visible without opening annotations.
+          echo "✗ $title :: $msg"
+          exit 1
